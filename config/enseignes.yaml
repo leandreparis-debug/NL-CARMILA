@@ -6,7 +6,9 @@
 # - une enseigne retirée n'est jamais effacée : elle n'est simplement plus suivie.
 #
 # Champs : name (obligatoire, unique), sector (texte), aliases (autres écritures du nom,
-# utilisées plus tard pour repérer l'enseigne dans les articles). Un nom ou un alias ne
+# utilisées pour repérer l'enseigne dans les articles), case_sensitive (facultatif,
+# false par défaut ; true exige la majuscule initiale lors de la détection, pour les noms
+# qui sont aussi des mots courants : « Adopt » ne doit pas correspondre à « adopter »). Un nom ou un alias ne
 # peut désigner qu'une seule enseigne (la casse, les accents et le type d'apostrophe ne
 # comptent pas pour cette vérification).
 #
@@ -16,6 +18,7 @@ brands:
   - name: Adopt
     sector: Parfumerie et beauté
     aliases: ["Adopt'", "Adopt Parfums"]
+    case_sensitive: true
   - name: Comptoir de Mathilde
     sector: Épicerie fine et chocolaterie
     aliases: ["Le Comptoir de Mathilde"]

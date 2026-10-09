@@ -5,10 +5,15 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 
 from news_franchise.models import RUN_FINAL_STATUSES, CollectionRun
-from news_franchise.repositories._common import from_iso_datetime, to_iso_datetime, utcnow
+from news_franchise.repositories._common import (
+    from_iso_datetime,
+    to_iso_datetime,
+    utcnow,
+)
 
 _COLUMNS = "id, newsletter_id, started_at, finished_at, status, stats, errors"
 
@@ -34,9 +39,14 @@ def get(conn: sqlite3.Connection, run_id: int) -> CollectionRun | None:
     return _from_row(row) if row else None
 
 
-def start(conn: sqlite3.Connection, newsletter_id: int) -> CollectionRun:
-    """Enregistre le début d'une collecte (statut running) et la renvoie."""
-    run = CollectionRun(newsletter_id=newsletter_id, started_at=utcnow())
+def start(
+    conn: sqlite3.Connection, newsletter_id: int, now: datetime | None = None
+) -> CollectionRun:
+    """Enregistre le début d'une collecte (statut running) et la renvoie.
+
+    now : heure de début (injectée par le collecteur) ; par défaut, maintenant.
+    """
+    run = CollectionRun(newsletter_id=newsletter_id, started_at=now or utcnow())
     cursor = conn.execute(
         "INSERT INTO collection_runs (newsletter_id, started_at, status) VALUES (?, ?, ?)",
         (run.newsletter_id, to_iso_datetime(run.started_at), run.status),
@@ -51,9 +61,10 @@ def finish(
     status: str,
     stats: dict[str, Any] | None = None,
     errors: Sequence[str] | None = None,
+    now: datetime | None = None,
 ) -> CollectionRun:
     """Clôt une collecte avec son statut final (success, partial, failed), ses statistiques
-    et ses erreurs (phrases en français)."""
+    et ses erreurs (phrases en français). now : heure de fin, par défaut maintenant."""
     if status not in RUN_FINAL_STATUSES:
         raise ValueError(
             f"Statut final de collecte invalide : {status!r} "
@@ -64,7 +75,7 @@ def finish(
         " WHERE id = ?",
         (
             status,
-            to_iso_datetime(utcnow()),
+            to_iso_datetime(now or utcnow()),
             json.dumps(stats or {}, ensure_ascii=False),
             json.dumps(list(errors or []), ensure_ascii=False),
             run_id,
@@ -85,3 +96,11 @@ def last_for_newsletter(conn: sqlite3.Connection, newsletter_id: int) -> Collect
         (newsletter_id,),
     ).fetchone()
     return _from_row(row) if row else None
+
+
+def list_running(conn: sqlite3.Connection) -> list[CollectionRun]:
+    """Collectes encore marquées « running » (toutes newsletters confondues)."""
+    rows = conn.execute(
+        f"SELECT {_COLUMNS} FROM collection_runs WHERE status = 'running' ORDER BY started_at"
+    )
+    return [_from_row(row) for row in rows]

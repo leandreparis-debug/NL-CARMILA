@@ -44,6 +44,7 @@ newsletters ─┬─< articles >──── brands
 | `sector` | TEXT | secteur d'activité |
 | `aliases` | TEXT | liste JSON des autres écritures du nom |
 | `tracked` | INTEGER | 1 = suivie ; 0 = retirée du YAML (jamais supprimée) |
+| `case_sensitive` | INTEGER | 1 = majuscule initiale exigée lors de la détection dans les articles (noms qui sont aussi des mots courants, ex. « Adopt » ≠ « adopter ») ; 0 par défaut. Recopié depuis le champ `case_sensitive` de `config/enseignes.yaml` (migration 0003) |
 
 ### `articles`: actualités de veille (rubriques 1 et 2)
 | Colonne | Type | Règles |
@@ -62,6 +63,7 @@ newsletters ─┬─< articles >──── brands
 | `selected` | INTEGER | 1 (défaut) = retenu pour la newsletter |
 | `position` | INTEGER | ordre dans la rubrique |
 | `collected_at` | TEXT | date de collecte |
+| `body_text` | TEXT | texte brut de l'article (paragraphes du corps), tronqué à 20 000 caractères, nullable (migration 0002). Sert à la détection des franchisés et des opportunités ; **jamais affiché tel quel** dans la newsletter |
 
 ### `franchisees`: franchisés identifiés (rubrique 5)
 | Colonne | Type | Règles |
@@ -88,6 +90,10 @@ newsletters ─┬─< articles >──── brands
 ### `collection_runs`: exécutions de la collecte
 `id`, `newsletter_id` (CASCADE), `started_at`, `finished_at` (nullable), `status` (`running`, `success`, `partial`, `failed`), `stats` (JSON), `errors` (liste JSON de phrases en français).
 
+Une ligne `running` sert aussi de verrou : une seule collecte à la fois. Une collecte restée `running` plus de 3 heures (application fermée brutalement) est considérée comme interrompue et passe en `failed` au lancement suivant.
+
+Contenu de `stats` écrit par le collecteur : `month`, `entries_read`, `added_rubric_1`, `added_rubric_2`, `duplicates`, `out_of_period`, `without_date`, `off_topic`, `sources` (liste `{name, kind, entries, added}`), `added_by_source_name` (articles ajoutés par éditeur).
+
 ### `schema_version`: migrations appliquées
 `version` (clé primaire), `name` (nom du fichier), `applied_at`.
 
@@ -103,9 +109,17 @@ Index : clés étrangères, `(newsletter_id, rubric, position)` sur `articles`, 
 | `franchisees` | `add`, `get`, `list_for_newsletter`, `update`, `set_validated`, `reorder`, `delete` |
 | `openings` | `add`, `get`, `list_for_newsletter`, `update`, `reorder`, `delete`, `add_photo`, `get_photo`, `list_photos`, `reorder_photos`, `delete_photo` (supprime aussi le fichier) |
 | `meetings` | `add`, `get`, `list_for_newsletter`, `update`, `reorder`, `delete` |
-| `collection_runs` | `start`, `finish`, `get`, `last_for_newsletter` |
+| `collection_runs` | `start`, `finish`, `get`, `last_for_newsletter`, `list_running` |
 
 Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion de la requête s'obtient par `news_franchise.db.connection.get_db()` ; ailleurs, par `get_connection(settings)` (à fermer après usage). Les connexions sont en autocommit ; pour grouper plusieurs écritures, utiliser `with transaction(conn):`.
+
+## Migrations livrées
+
+| Fichier | Contenu |
+|---|---|
+| `0001_initial.sql` | Schéma initial (étape 3) |
+| `0002_article_body.sql` | Colonne `articles.body_text` |
+| `0003_brand_case_sensitive.sql` | Colonne `brands.case_sensitive` |
 
 ## Ajouter une migration
 

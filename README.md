@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique, outil de diagnostic des sources de veille et base de données locale. La page d'accueil s'affiche, les boutons des futures fonctions sont présents mais désactivés.
+> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale et collecte de la veille. Les boutons Relire, Contenu interne et Exporter sont encore désactivés.
 
 ## Prérequis
 
@@ -101,6 +101,58 @@ Une enseigne retirée du fichier n'est jamais effacée de la base (son historiqu
 
 **À vérifier** : les secteurs ont été saisis à titre indicatif. Celui de « Mira Mira » est à compléter.
 
+## Collecter la veille
+
+La collecte lit les sources activées dans `config\sources.yaml` (flux RSS des sites et, si activé, Google Actualités pour chaque enseigne suivie). Elle ne garde que les articles **publiés pendant le mois choisi** (heure de Paris) et les classe :
+
+- **rubrique 2** (actualités des enseignes) si le titre ou le résumé cite une enseigne de `config\enseignes.yaml` (nom ou autre écriture) ;
+- **rubrique 1** (nouvelles franchises et développement) sinon, s'il contient un terme de développement en franchise de `config\regles_veille.yaml` ;
+- les autres articles sont écartés.
+
+Pour chaque article retenu, elle enregistre le titre, la source, la date, le **lien d'origine** (jamais inventé) et les premières lignes de l'article (environ 300 caractères, copiées telles quelles depuis la page, jamais reformulées). Tout le texte venant des sites est converti en texte brut.
+
+### Lancer une collecte
+
+- **Depuis l'application** : bouton **Collecter la veille** sur la page d'accueil. Choisissez le mois (par défaut le mois précédent, puisque la newsletter est préparée en début de mois pour le mois écoulé) puis **Lancer la collecte**. La page de suivi se met à jour toute seule, puis affiche le bilan.
+- **En double-cliquant sur `collecter_veille.bat`** : il demande le mois (Entrée = mois précédent), puis affiche l'avancement et le bilan.
+- **En ligne de commande** :
+
+  ```bat
+  .venv\Scripts\python.exe -m news_franchise.tools.collect --month 2026-10
+  ```
+
+Une seule collecte peut tourner à la fois ; une deuxième demande est refusée avec un message. Relancer la collecte d'un mois **ajoute uniquement les nouveaux articles** : la sélection, les corrections et l'ordre déjà faits ne sont jamais modifiés.
+
+Prérequis : `config\sources.yaml` doit exister (voir « Tester les sources de veille »). S'il manque, la collecte ne démarre pas et l'application explique comment le créer.
+
+### Lire le bilan
+
+| Ligne | Signification |
+|---|---|
+| Articles ajoutés, rubrique 1 / 2 | Nouveaux articles enregistrés, prêts à être relus |
+| Doublons ignorés | Article déjà présent ce mois-ci : même lien (après nettoyage des paramètres `utm_*`…) ou titre quasi identique pour la même enseigne |
+| Articles hors période | Publiés en dehors du mois choisi |
+| Articles sans date | Le flux ne donne pas de date : écartés, faute de pouvoir vérifier le mois |
+| Articles hors sujet | Ni enseigne suivie, ni terme de développement en franchise |
+| Par source | Entrées lues et articles ajoutés pour chaque source configurée |
+
+### Si une source est en erreur
+
+Une source en erreur n'arrête pas la collecte : les autres sources sont traitées, le bilan indique « Terminée, avec des sources en erreur » et donne la raison en français (ex. « Le site n'a pas répondu à temps », « Le site a refusé l'accès (HTTP 403) »).
+
+1. Relancez la collecte un peu plus tard : seuls les articles manquants seront ajoutés.
+2. Si l'erreur persiste plusieurs jours, relancez `diagnostiquer_sources.bat` pour vérifier la source, puis désactivez-la (`enabled: false`) dans `config\sources.yaml` si elle n'est plus exploitable.
+3. Le détail technique est dans `%LOCALAPPDATA%\NewsFranchise\logs\news_franchise.log`.
+
+### Ajuster le tri
+
+Les listes de mots-clés sont dans **`config\regles_veille.yaml`** (commenté) :
+
+- `development_terms` : termes qui envoient un article en rubrique 1 ;
+- `exclusions` : expressions à ne pas compter (« franchise d'assurance », « franchise de TVA »…).
+
+Pour une enseigne dont le nom est aussi un mot courant, mettez `case_sensitive: true` dans `config\enseignes.yaml` : la majuscule initiale sera exigée (c'est le cas d'Adopt, pour ne pas confondre avec « adopter »). Les changements s'appliquent aux collectes suivantes ; les articles déjà collectés ne sont pas reclassés.
+
 ## Tester les sources de veille
 
 La veille ne repose que sur des flux d'actualité **réellement exploitables** : aucun lien n'est inventé, une source n'est retenue que si elle fournit de vrais articles avec leur URL d'origine. L'outil de diagnostic teste depuis votre PC chaque source candidate (5 sites spécialisés et Google Actualités, interrogé pour chacune des 15 enseignes suivies). La liste est dans `news_franchise/sources/candidates.py`.
@@ -168,6 +220,7 @@ NewsFranchise/
 ├── lancer.bat              # Lancement en double-clic (crée/met à jour .venv)
 ├── tests.bat               # Lancement des tests
 ├── diagnostiquer_sources.bat # Diagnostic des sources de veille
+├── collecter_veille.bat    # Collecte de la veille d'un mois
 ├── requirements.txt        # Dépendances d'exécution (versions exactes)
 ├── requirements-dev.txt    # Dépendances de test (inclut requirements.txt)
 ├── pyproject.toml          # Métadonnées du projet et configuration de pytest
@@ -177,6 +230,7 @@ NewsFranchise/
 ├── README.md
 ├── config/
 │   ├── enseignes.yaml      # Référentiel des 15 enseignes suivies
+│   ├── regles_veille.yaml  # Mots-clés de tri de la veille (rubrique 1, exclusions)
 │   └── sources.example.yaml  # Format documenté de config/sources.yaml
 ├── docs/
 │   └── data-model.md       # Modèle de données et procédure de migration
@@ -197,8 +251,17 @@ NewsFranchise/
 │   │   ├── candidates.py   # Sources candidates et enseignes suivies
 │   │   ├── discovery.py    # Découverte des flux d'un site
 │   │   └── evaluation.py   # Évaluation d'un flux, Google Actualités, verdicts
+│   ├── collect/            # Collecteur de veille
+│   │   ├── config.py       # Lecture de sources.yaml et regles_veille.yaml
+│   │   ├── feeds.py        # Lecture des flux (sites, Google Actualités)
+│   │   ├── matching.py     # Détection des enseignes et des mots-clés, classement
+│   │   ├── urls.py         # Normalisation des liens (dédoublonnage)
+│   │   ├── excerpt.py      # Premières lignes et texte brut des articles
+│   │   ├── runner.py       # Orchestrateur run_collection()
+│   │   └── views.py        # Pages web /collecte
 │   ├── tools/
-│   │   └── diagnose_sources.py  # Outil de diagnostic des sources
+│   │   ├── diagnose_sources.py  # Outil de diagnostic des sources
+│   │   └── collect.py      # Collecte en ligne de commande
 │   ├── templates/          # Gabarits Jinja2 (base, accueil, erreur)
 │   └── static/             # Feuille de style
 └── tests/
@@ -210,6 +273,9 @@ NewsFranchise/
     ├── test_db.py
     ├── test_brands.py
     ├── test_repositories.py
+    ├── test_collect_units.py
+    ├── test_collect_runner.py
+    ├── test_collect_web.py
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

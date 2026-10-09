@@ -12,7 +12,7 @@ import yaml
 from news_franchise.config import PROJECT_DIR, ConfigError
 
 BRANDS_FILE = PROJECT_DIR / "config" / "enseignes.yaml"
-ALLOWED_KEYS = frozenset({"name", "sector", "aliases"})
+ALLOWED_KEYS = frozenset({"name", "sector", "aliases", "case_sensitive"})
 
 
 class BrandCatalogError(ConfigError):
@@ -26,6 +26,7 @@ class BrandEntry:
     name: str
     sector: str = ""
     aliases: tuple[str, ...] = field(default_factory=tuple)
+    case_sensitive: bool = False  # majuscule initiale exigée lors de la détection
     line: int = 0  # ligne du fichier, pour les messages d'erreur
 
 
@@ -86,7 +87,7 @@ def parse_brand_catalog(text: str, source: str = "config/enseignes.yaml") -> lis
         if unknown:
             raise BrandCatalogError(
                 f"{where} : champ(s) inconnu(s) {', '.join(map(str, unknown))} "
-                "(champs possibles : name, sector, aliases)."
+                "(champs possibles : name, sector, aliases, case_sensitive)."
             )
         name = item.get("name")
         if not isinstance(name, str) or not name.strip():
@@ -104,6 +105,9 @@ def parse_brand_catalog(text: str, source: str = "config/enseignes.yaml") -> lis
         ):
             raise BrandCatalogError(f"{where} : « aliases » doit être une liste de textes.")
         aliases = [a.strip() for a in aliases]
+        case_sensitive = item.get("case_sensitive", False)
+        if not isinstance(case_sensitive, bool):
+            raise BrandCatalogError(f"{where} : « case_sensitive » doit valoir true ou false.")
         if not slugify(name):
             raise BrandCatalogError(f"{where} : le nom doit contenir des lettres ou chiffres.")
 
@@ -119,7 +123,13 @@ def parse_brand_catalog(text: str, source: str = "config/enseignes.yaml") -> lis
             own_keys.setdefault(key, f"par « {name} »" + (f", ligne {line}" if line else ""))
         seen.update(own_keys)
         entries.append(
-            BrandEntry(name=name, sector=sector.strip(), aliases=tuple(aliases), line=line)
+            BrandEntry(
+                name=name,
+                sector=sector.strip(),
+                aliases=tuple(aliases),
+                case_sensitive=case_sensitive,
+                line=line,
+            )
         )
 
     slugs = [slugify(e.name) for e in entries]

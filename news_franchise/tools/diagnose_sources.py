@@ -26,7 +26,6 @@ from typing import Any
 
 import yaml
 
-from news_franchise import __version__
 from news_franchise.config import ConfigError, Settings, load_settings
 from news_franchise.http_client import Fetcher
 from news_franchise.logging_setup import configure_logging
@@ -49,6 +48,7 @@ from news_franchise.sources.evaluation import (
     evaluate_feed,
     evaluate_google_news,
 )
+from news_franchise.version import __version__
 
 logger = logging.getLogger(__name__)
 

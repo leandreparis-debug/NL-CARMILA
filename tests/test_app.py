@@ -14,7 +14,12 @@ from news_franchise import __version__, create_app
 from news_franchise.brand_catalog import BrandCatalogError
 from news_franchise.config import Settings
 from news_franchise.dates import format_month_fr
-from news_franchise.db.connection import current_version, db_path, get_connection, get_db
+from news_franchise.db.connection import (
+    current_version,
+    db_path,
+    get_connection,
+    get_db,
+)
 from news_franchise.repositories import brands
 
 
@@ -71,7 +76,7 @@ def test_format_month_fr() -> None:
 def test_app_creates_database_with_brands(app: Flask, settings: Settings) -> None:
     assert db_path(settings).is_file()
     with closing(get_connection(settings)) as conn:
-        assert current_version(conn) == 1
+        assert current_version(conn) == 3
         assert len(brands.list_all(conn, tracked_only=True)) == 15
 
 

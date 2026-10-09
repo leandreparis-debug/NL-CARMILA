@@ -8,10 +8,11 @@ import sys
 import threading
 import webbrowser
 
-from news_franchise import __version__, create_app
+from news_franchise import create_app
 from news_franchise.config import ConfigError, load_settings
 from news_franchise.db import DatabaseError
 from news_franchise.logging_setup import configure_logging
+from news_franchise.version import __version__
 
 logger = logging.getLogger("news_franchise")
 

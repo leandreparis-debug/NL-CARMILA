@@ -1,0 +1,43 @@
+# Règles de tri de la veille (collecte automatique).
+#
+# Chaque entrée de flux est classée ainsi :
+#   1. elle cite une enseigne suivie (nom ou alias de config/enseignes.yaml)
+#      → rubrique 2 « Actualités des enseignes » ;
+#   2. sinon, elle contient un des « development_terms » ci-dessous
+#      → rubrique 1 « Nouvelles franchises et développement » ;
+#   3. sinon, elle est écartée (comptée dans le bilan).
+# Seuls le titre et le résumé fournis par le flux sont examinés.
+#
+# Comparaison : la casse, les accents et le type d'apostrophe (' ou ’) ne comptent pas ;
+# l'expression doit être un mot entier (« franchise » ne trouve pas « affranchissement ») ;
+# le pluriel en s ou x est accepté (« franchise » trouve « franchises »).
+#
+# Pour ajouter un mot-clé : ajoutez une ligne « - mot ou expression » dans la liste,
+# avec la même indentation (2 espaces, pas de tabulation), puis relancez la collecte.
+# Les articles déjà collectés ne sont pas reclassés.
+
+# Termes qui signalent un article sur le développement en franchise (rubrique 1).
+development_terms:
+  - franchise
+  - franchisé
+  - franchiseur
+  - master franchise
+  - réseau de franchise
+  - nouvelle enseigne
+  - ouvre en franchise
+  - développement en franchise
+  - s'implante
+  - points de vente
+  - ouverture de
+
+# Expressions qui NE comptent PAS comme développement en franchise (faux positifs).
+# Elles sont retirées du texte avant la recherche des termes ci-dessus : un article qui ne
+# parle que de « franchise d'assurance » est écarté, mais un article qui cite aussi un
+# « réseau de franchise » reste en rubrique 1.
+exclusions:
+  - franchise d'assurance
+  - franchise de TVA
+  - franchise en base de TVA
+  - en franchise de droits
+  - franchise médicale
+  - franchise postale

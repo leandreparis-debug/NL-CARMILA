@@ -9,11 +9,15 @@ from collections.abc import Sequence
 from news_franchise.db.connection import transaction
 from news_franchise.models import ARTICLE_RUBRICS, Article
 from news_franchise.repositories import _common
-from news_franchise.repositories._common import from_iso_datetime, to_iso_datetime, utcnow
+from news_franchise.repositories._common import (
+    from_iso_datetime,
+    to_iso_datetime,
+    utcnow,
+)
 
 _COLUMNS = (
     "id, newsletter_id, rubric, brand_id, sector, title, published_at, source_name, url,"
-    " excerpt, is_opportunity, selected, position, collected_at"
+    " excerpt, is_opportunity, selected, position, collected_at, body_text"
 )
 _SCOPE = "newsletter_id = ? AND rubric = ?"
 
@@ -35,6 +39,7 @@ def _from_row(row: sqlite3.Row) -> Article:
         selected=bool(row["selected"]),
         position=row["position"],
         collected_at=from_iso_datetime(row["collected_at"]),
+        body_text=row["body_text"],
     )
 
 
@@ -70,8 +75,9 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
             article.collected_at = utcnow()
         cursor = conn.execute(
             "INSERT INTO articles (newsletter_id, rubric, brand_id, sector, title, published_at,"
-            " source_name, url, excerpt, is_opportunity, selected, position, collected_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            " source_name, url, excerpt, is_opportunity, selected, position, collected_at,"
+            " body_text)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             " ON CONFLICT (newsletter_id, url) DO NOTHING",
             (
                 article.newsletter_id,
@@ -87,6 +93,7 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
                 int(article.selected),
                 article.position,
                 to_iso_datetime(article.collected_at),
+                article.body_text,
             ),
         )
         if cursor.rowcount == 0:
@@ -120,8 +127,8 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
         cursor = conn.execute(
             "UPDATE articles SET newsletter_id = ?, rubric = ?, brand_id = ?, sector = ?,"
             " title = ?, published_at = ?, source_name = ?, url = ?, excerpt = ?,"
-            " is_opportunity = ?, selected = ?, position = COALESCE(?, position)"
-            " WHERE id = ?",
+            " is_opportunity = ?, selected = ?, position = COALESCE(?, position),"
+            " body_text = ? WHERE id = ?",
             (
                 article.newsletter_id,
                 article.rubric,
@@ -135,6 +142,7 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
                 int(article.is_opportunity),
                 int(article.selected),
                 article.position,
+                article.body_text,
                 article_id,
             ),
         )

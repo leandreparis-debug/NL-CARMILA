@@ -3,9 +3,13 @@
   <h1>News Franchise</h1>
   <p class="month">Newsletter de <strong>{{ current_month }}</strong></p>
   <section class="actions" aria-label="Fonctions">
-    {% for feature in features %}
-      <button type="button" disabled title="Disponible prochainement">{{ feature }}</button>
+    {% for label, endpoint in features %}
+      {% if endpoint %}
+        <a class="button" href="{{ url_for(endpoint) }}">{{ label }}</a>
+      {% else %}
+        <button type="button" disabled title="Disponible prochainement">{{ label }}</button>
+      {% endif %}
     {% endfor %}
   </section>
-  <p class="hint">Ces fonctions seront disponibles dans les prochaines versions.</p>
+  <p class="hint">Les fonctions grisées seront disponibles dans les prochaines versions.</p>
 {% endblock %}

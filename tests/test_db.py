@@ -22,6 +22,8 @@ from news_franchise.db.connection import (
 )
 from tests.helpers import FIXTURES_DIR
 
+LATEST = list_migrations()[-1].version
+
 EXPECTED_TABLES = {
     "schema_version",
     "newsletters",
@@ -45,12 +47,12 @@ def _columns(conn: sqlite3.Connection, table: str) -> set[str]:
 
 
 def test_fresh_database(settings: Settings) -> None:
-    assert init_db(settings) == 1
+    assert init_db(settings) == LATEST
     assert db_path(settings) == settings.data_dir / "db" / "news_franchise.sqlite3"
     assert db_path(settings).is_file()
     with closing(get_connection(settings)) as conn:
         assert EXPECTED_TABLES <= _tables(conn)
-        assert current_version(conn) == 1
+        assert current_version(conn) == LATEST
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
         assert isinstance(conn.execute("SELECT 1 AS x").fetchone(), sqlite3.Row)
@@ -60,7 +62,7 @@ def test_init_db_twice_does_nothing(settings: Settings) -> None:
     init_db(settings)
     with closing(get_connection(settings)) as conn:
         before = conn.execute("SELECT version, applied_at FROM schema_version").fetchall()
-    assert init_db(settings) == 1
+    assert init_db(settings) == LATEST
     with closing(get_connection(settings)) as conn:
         after = conn.execute("SELECT version, applied_at FROM schema_version").fetchall()
     assert [tuple(r) for r in before] == [tuple(r) for r in after]
@@ -70,15 +72,16 @@ def test_failed_migration_leaves_database_intact(settings: Settings, tmp_path: P
     init_db(settings)
     migrations = tmp_path / "migrations"
     migrations.mkdir()
-    shutil.copy(MIGRATIONS_DIR / "0001_initial.sql", migrations)
-    shutil.copy(FIXTURES_DIR / "migrations_broken" / "0002_broken.sql", migrations)
+    for migration in MIGRATIONS_DIR.glob("*.sql"):
+        shutil.copy(migration, migrations)
+    shutil.copy(FIXTURES_DIR / "migrations_broken" / "0099_broken.sql", migrations)
 
-    with pytest.raises(MigrationError, match="0002_broken.sql a échoué") as excinfo:
+    with pytest.raises(MigrationError, match="0099_broken.sql a échoué") as excinfo:
         init_db(settings, migrations)
-    assert "version 1" in str(excinfo.value)
+    assert f"version {LATEST}" in str(excinfo.value)
 
     with closing(get_connection(settings)) as conn:
-        assert current_version(conn) == 1
+        assert current_version(conn) == LATEST
         assert "should_not_exist" not in _tables(conn)
         assert "extra" not in _columns(conn, "articles")
 
@@ -86,7 +89,7 @@ def test_failed_migration_leaves_database_intact(settings: Settings, tmp_path: P
 def test_failed_first_migration_on_fresh_database(settings: Settings, tmp_path: Path) -> None:
     migrations = tmp_path / "migrations"
     migrations.mkdir()
-    shutil.copy(FIXTURES_DIR / "migrations_broken" / "0002_broken.sql", migrations / "0001_x.sql")
+    shutil.copy(FIXTURES_DIR / "migrations_broken" / "0099_broken.sql", migrations / "0001_x.sql")
     with pytest.raises(MigrationError):
         init_db(settings, migrations)
     with closing(get_connection(settings)) as conn:
@@ -114,3 +117,34 @@ def test_transaction_rolls_back(conn: sqlite3.Connection) -> None:
         )
         raise RuntimeError("annulation")
     assert conn.execute("SELECT COUNT(*) FROM newsletters").fetchone()[0] == 0
+
+
+def test_migration_0002_keeps_step3_data(settings: Settings, tmp_path: Path) -> None:
+    """Une base de l'étape 3 (schéma v1, avec données) passe en dernière version sans perte."""
+    step3 = tmp_path / "migrations_v1"
+    step3.mkdir()
+    shutil.copy(MIGRATIONS_DIR / "0001_initial.sql", step3)
+    assert init_db(settings, step3) == 1
+    with closing(get_connection(settings)) as conn:
+        conn.execute(
+            "INSERT INTO newsletters (id, month, created_at, updated_at)"
+            " VALUES (1, '2026-09', 'x', 'x')"
+        )
+        conn.execute(
+            "INSERT INTO brands (name, slug, sector, aliases) VALUES ('Adopt', 'adopt', 'B', '[]')"
+        )
+        conn.execute(
+            "INSERT INTO articles (newsletter_id, rubric, title, source_name, url, selected,"
+            " position, collected_at) VALUES (1, 1, 'Titre relu', 'Source',"
+            " 'https://a.example/1', 0, 4, '2026-09-30T10:00:00+00:00')"
+        )
+
+    assert init_db(settings) == LATEST
+
+    with closing(get_connection(settings)) as conn:
+        row = conn.execute("SELECT * FROM articles").fetchone()
+        assert (row["title"], row["selected"], row["position"]) == ("Titre relu", 0, 4)
+        assert row["body_text"] is None
+        brand = conn.execute("SELECT * FROM brands").fetchone()
+        assert (brand["name"], brand["case_sensitive"]) == ("Adopt", 0)
+        assert conn.execute("SELECT COUNT(*) FROM newsletters").fetchone()[0] == 1

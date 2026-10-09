@@ -13,7 +13,7 @@ from urllib.robotparser import RobotFileParser
 
 import httpx
 
-from news_franchise import __version__
+from news_franchise.version import __version__
 
 logger = logging.getLogger(__name__)
 

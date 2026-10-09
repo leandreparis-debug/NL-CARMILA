@@ -3,32 +3,30 @@
 from __future__ import annotations
 
 import logging
-from contextlib import closing
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, abort, jsonify, render_template, request
 from flask.typing import ResponseReturnValue
-from werkzeug.exceptions import InternalServerError, NotFound
+from werkzeug.exceptions import Forbidden, InternalServerError, NotFound
 
-from news_franchise.brand_catalog import BRANDS_FILE
+from news_franchise.bootstrap import prepare_database
+from news_franchise.collect.views import bp as collect_bp
 from news_franchise.config import Settings, load_settings
 from news_franchise.dates import format_month_fr
 from news_franchise.db import connection as db_connection
-from news_franchise.repositories import brands
-
-__version__ = "0.1.0"
+from news_franchise.version import __version__
 
 __all__ = ["__version__", "create_app"]
 
 logger = logging.getLogger(__name__)
 
-# Fonctions prévues aux étapes suivantes (boutons désactivés pour l'instant).
-UPCOMING_FEATURES = (
-    "Collecter la veille",
-    "Relire",
-    "Contenu interne",
-    "Exporter",
+# Boutons de la page d'accueil : (libellé, route Flask) ; route None = pas encore disponible.
+FEATURES: tuple[tuple[str, str | None], ...] = (
+    ("Collecter la veille", "collect.index"),
+    ("Relire", None),
+    ("Contenu interne", None),
+    ("Exporter", None),
 )
 
 
@@ -46,22 +44,30 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
     if settings is None:
         settings = load_settings()
 
-    version = db_connection.init_db(settings)
-    with closing(db_connection.get_connection(settings)) as conn:
-        sync = brands.sync_from_yaml(conn, brands_file or BRANDS_FILE)
-    logger.info(
-        "Base %s (schéma v%d) ; enseignes ajoutées : %d, mises à jour : %d, plus suivies : %d",
-        db_connection.db_path(settings),
-        version,
-        len(sync.added),
-        len(sync.updated),
-        len(sync.untracked),
-    )
+    prepare_database(settings, brands_file)
 
     app = Flask(__name__)
     app.config["NF_SETTINGS"] = settings
     app.config["DEBUG"] = settings.debug
     db_connection.init_app(app)
+    app.register_blueprint(collect_bp)
+
+    @app.before_request
+    def reject_cross_site_posts() -> None:
+        """Refuse les envois de formulaire venant d'un autre site (protection CSRF).
+
+        L'application n'écoute que sur 127.0.0.1, mais une page web malveillante pourrait
+        tenter d'y poster un formulaire : on exige que l'origine soit l'application.
+        """
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return
+        expected = request.host_url.rstrip("/")
+        origin = request.headers.get("Origin")
+        referer = request.headers.get("Referer")
+        if origin is not None and origin != expected:
+            abort(403)
+        if origin is None and referer is not None and not referer.startswith(expected + "/"):
+            abort(403)
 
     @app.context_processor
     def inject_globals() -> dict[str, object]:
@@ -74,7 +80,7 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
         return render_template(
             "index.html",
             current_month=format_month_fr(date.today()),
-            features=UPCOMING_FEATURES,
+            features=FEATURES,
         )
 
     @app.get("/health")
@@ -93,6 +99,19 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
                 message="La page demandée n'existe pas.",
             ),
             404,
+        )
+
+    @app.errorhandler(Forbidden)
+    def forbidden(error: Forbidden) -> ResponseReturnValue:
+        """Page 403 en français."""
+        return (
+            render_template(
+                "error.html",
+                code=403,
+                title="Action refusée",
+                message="Cette action doit être lancée depuis l'application News Franchise.",
+            ),
+            403,
         )
 
     @app.errorhandler(InternalServerError)

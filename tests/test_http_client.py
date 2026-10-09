@@ -5,7 +5,12 @@ from __future__ import annotations
 import httpx
 import respx
 
-from news_franchise.http_client import USER_AGENT, Fetcher, create_client, describe_status
+from news_franchise.http_client import (
+    USER_AGENT,
+    Fetcher,
+    create_client,
+    describe_status,
+)
 from tests.helpers import serve
 
 URL = "https://site.example/page"

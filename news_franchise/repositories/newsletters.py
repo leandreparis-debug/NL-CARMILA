@@ -14,7 +14,11 @@ from news_franchise.models import (
     validate_url,
 )
 from news_franchise.repositories import openings
-from news_franchise.repositories._common import from_iso_datetime, to_iso_datetime, utcnow
+from news_franchise.repositories._common import (
+    from_iso_datetime,
+    to_iso_datetime,
+    utcnow,
+)
 
 _COLUMNS = "id, month, status, development_plans_url, created_at, updated_at"
 

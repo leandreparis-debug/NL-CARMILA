@@ -11,7 +11,7 @@ from news_franchise.brand_catalog import BRANDS_FILE, load_brand_catalog, slugif
 from news_franchise.db.connection import transaction
 from news_franchise.models import Brand
 
-_COLUMNS = "id, name, slug, sector, aliases, tracked"
+_COLUMNS = "id, name, slug, sector, aliases, tracked, case_sensitive"
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,7 @@ def _from_row(row: sqlite3.Row) -> Brand:
         sector=row["sector"],
         aliases=json.loads(row["aliases"]),
         tracked=bool(row["tracked"]),
+        case_sensitive=bool(row["case_sensitive"]),
     )
 
 
@@ -64,10 +65,10 @@ def get_by_slug(conn: sqlite3.Connection, slug: str) -> Brand | None:
 def sync_from_yaml(conn: sqlite3.Connection, path: Path = BRANDS_FILE) -> BrandSyncResult:
     """Synchronise la table brands avec le fichier YAML, en une transaction.
 
-    Ajoute les nouvelles enseignes, met à jour secteur et alias des existantes (repérées
-    par leur nom) et repasse tracked = 1 ; une enseigne retirée du YAML n'est jamais
-    supprimée : elle passe tracked = 0. Lève BrandCatalogError si le fichier est invalide
-    (la base n'est alors pas modifiée).
+    Ajoute les nouvelles enseignes, met à jour secteur, alias et case_sensitive des
+    existantes (repérées par leur nom) et repasse tracked = 1 ; une enseigne retirée du
+    YAML n'est jamais supprimée : elle passe tracked = 0. Lève BrandCatalogError si le
+    fichier est invalide (la base n'est alors pas modifiée).
     """
     entries = load_brand_catalog(path)
     result = BrandSyncResult()
@@ -78,20 +79,32 @@ def sync_from_yaml(conn: sqlite3.Connection, path: Path = BRANDS_FILE) -> BrandS
             brand = existing.get(entry.name)
             if brand is None:
                 conn.execute(
-                    "INSERT INTO brands (name, slug, sector, aliases, tracked)"
-                    " VALUES (?, ?, ?, ?, 1)",
+                    "INSERT INTO brands (name, slug, sector, aliases, tracked, case_sensitive)"
+                    " VALUES (?, ?, ?, ?, 1, ?)",
                     (
                         entry.name,
                         slugify(entry.name),
                         entry.sector,
                         json.dumps(aliases, ensure_ascii=False),
+                        int(entry.case_sensitive),
                     ),
                 )
                 result.added.append(entry.name)
-            elif (brand.sector, brand.aliases, brand.tracked) != (entry.sector, aliases, True):
+            elif (brand.sector, brand.aliases, brand.tracked, brand.case_sensitive) != (
+                entry.sector,
+                aliases,
+                True,
+                entry.case_sensitive,
+            ):
                 conn.execute(
-                    "UPDATE brands SET sector = ?, aliases = ?, tracked = 1 WHERE id = ?",
-                    (entry.sector, json.dumps(aliases, ensure_ascii=False), brand.id),
+                    "UPDATE brands SET sector = ?, aliases = ?, tracked = 1, case_sensitive = ?"
+                    " WHERE id = ?",
+                    (
+                        entry.sector,
+                        json.dumps(aliases, ensure_ascii=False),
+                        int(entry.case_sensitive),
+                        brand.id,
+                    ),
                 )
                 result.updated.append(entry.name)
         names = {entry.name for entry in entries}

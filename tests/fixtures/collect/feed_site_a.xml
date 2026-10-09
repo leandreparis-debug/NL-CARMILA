@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Site A - Actualités de la franchise</title>
+    <link>https://site-a.example/</link>
+    <description>Actualités</description>
+    <item>
+      <title>Pokawa ouvre son 100e restaurant en France</title>
+      <link>https://site-a.example/articles/pokawa-100e-restaurant?utm_source=rss&amp;utm_medium=feed</link>
+      <pubDate>Sat, 10 Oct 2026 08:00:00 +0200</pubDate>
+      <description><![CDATA[<p>L'enseigne de poke bowls <b>accélère</b>.</p><script>alert('x')</script>]]></description>
+    </item>
+    <item>
+      <title>Un nouveau réseau de franchise dans la boulangerie</title>
+      <link>https://site-a.example/articles/nouveau-reseau-boulangerie</link>
+      <pubDate>Mon, 05 Oct 2026 09:00:00 +0200</pubDate>
+      <description>Une jeune enseigne lance son développement.</description>
+    </item>
+    <item>
+      <title>La franchise d'assurance auto augmente en 2027</title>
+      <link>https://site-a.example/articles/franchise-assurance</link>
+      <pubDate>Sat, 03 Oct 2026 09:00:00 +0200</pubDate>
+      <description>Les assureurs relèvent leurs tarifs.</description>
+    </item>
+    <item>
+      <title>Météo : un week-end ensoleillé</title>
+      <link>https://site-a.example/articles/meteo</link>
+      <pubDate>Fri, 02 Oct 2026 09:00:00 +0200</pubDate>
+      <description>Beau temps sur toute la France.</description>
+    </item>
+    <item>
+      <title>Les franchiseurs réunis au salon de septembre</title>
+      <link>https://site-a.example/articles/salon-septembre</link>
+      <pubDate>Tue, 15 Sep 2026 09:00:00 +0200</pubDate>
+      <description>Retour sur le salon.</description>
+    </item>
+    <item>
+      <title>Un franchisé témoigne (article sans date)</title>
+      <link>https://site-a.example/articles/sans-date</link>
+      <description>Témoignage.</description>
+    </item>
+    <item>
+      <title>Master franchise : un accord signé le soir d'Halloween</title>
+      <link>https://site-a.example/articles/halloween-paris</link>
+      <pubDate>Sat, 31 Oct 2026 23:30:00 +0100</pubDate>
+      <description>Signature à 23 h 30, heure de Paris.</description>
+    </item>
+    <item>
+      <title>Master franchise : un accord signé à minuit UTC</title>
+      <link>https://site-a.example/articles/halloween-utc</link>
+      <pubDate>Sat, 31 Oct 2026 23:30:00 +0000</pubDate>
+      <description>Signature à 23 h 30 UTC, soit le 1er novembre à Paris.</description>
+    </item>
+  </channel>
+</rss>

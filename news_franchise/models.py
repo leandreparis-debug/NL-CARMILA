@@ -21,6 +21,7 @@ RUBRIC_BRAND_NEWS = 2
 ARTICLE_RUBRICS = (RUBRIC_NEW_FRANCHISES, RUBRIC_BRAND_NEWS)
 RUN_STATUSES = ("running", "success", "partial", "failed")
 RUN_FINAL_STATUSES = ("success", "partial", "failed")
+BODY_TEXT_MAX_LENGTH = 20_000
 
 
 # --------------------------------------------------------------------------- validation
@@ -126,6 +127,7 @@ class Brand:
     sector: str = ""
     aliases: list[str] = field(default_factory=list)
     tracked: bool = True
+    case_sensitive: bool = False  # True : majuscule initiale exigée lors de la détection
     id: int | None = None
 
     def __post_init__(self) -> None:
@@ -155,10 +157,13 @@ class Article:
     selected: bool = True
     position: int | None = None
     collected_at: datetime | None = None
+    body_text: str | None = None  # texte brut de l'article, jamais affiché tel quel
     id: int | None = None
 
     def __post_init__(self) -> None:
-        """Valide la rubrique, le titre, la source, l'URL et la position."""
+        """Valide la rubrique, le titre, la source, l'URL et la position ; tronque body_text."""
+        if self.body_text is not None:
+            self.body_text = self.body_text[:BODY_TEXT_MAX_LENGTH]
         if self.rubric not in ARTICLE_RUBRICS:
             raise ValueError(f"Rubrique d'article invalide : {self.rubric!r} (1 ou 2).")
         self.title = _require_text(self.title, "titre")

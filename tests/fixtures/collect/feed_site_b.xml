@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Site B</title>
+    <link>https://site-b.example/</link>
+    <description>Actualités</description>
+    <item>
+      <title>Pokawa ouvre son 100e restaurant en France !</title>
+      <link>https://site-b.example/news/pokawa-cent-restaurants</link>
+      <pubDate>Sun, 11 Oct 2026 10:00:00 +0200</pubDate>
+      <description>Même information, autre site.</description>
+    </item>
+    <item>
+      <title>Reprise : Pokawa ouvre son 100e restaurant en France</title>
+      <link>https://SITE-A.example/articles/pokawa-100e-restaurant/#commentaires</link>
+      <pubDate>Sun, 11 Oct 2026 11:00:00 +0200</pubDate>
+      <description>Même URL que le site A, avec fragment et « / » final.</description>
+    </item>
+    <item>
+      <title>Adopt ouvre 10 boutiques cet automne</title>
+      <link>https://site-b.example/news/adopt-10-boutiques</link>
+      <pubDate>Thu, 08 Oct 2026 10:00:00 +0200</pubDate>
+      <description>La marque de parfums poursuit son expansion.</description>
+    </item>
+    <item>
+      <title>Pourquoi adopter un chien change la vie</title>
+      <link>https://site-b.example/news/adopter-chien</link>
+      <pubDate>Thu, 08 Oct 2026 11:00:00 +0200</pubDate>
+      <description>Témoignages sur l'adoption.</description>
+    </item>
+  </channel>
+</rss>

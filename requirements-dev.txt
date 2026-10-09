@@ -1,7 +1,8 @@
 # Dépendances de développement et de test (inclut celles d'exécution).
 -r requirements.txt
-# Dépendance directe
+# Dépendances directes
 pytest==9.1.1
+respx==0.23.1
 # Dépendances transitives de pytest
 colorama==0.4.6; sys_platform == "win32"
 iniconfig==2.3.1

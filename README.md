@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique uniquement. La page d'accueil s'affiche, les boutons des futures fonctions sont présents mais désactivés.
+> **État actuel (v0.1.0)** : socle technique et outil de diagnostic des sources de veille. La page d'accueil s'affiche, les boutons des futures fonctions sont présents mais désactivés.
 
 ## Prérequis
 
@@ -70,6 +70,53 @@ La configuration se fait par variables d'environnement, ou plus simplement dans 
 
 Une valeur invalide arrête l'application avec un message qui nomme la variable fautive. Le fichier `.env` n'est pas versionné : n'y mettez rien qui doive être partagé. Aucun secret n'est écrit dans le code.
 
+## Tester les sources de veille
+
+La veille ne repose que sur des flux d'actualité **réellement exploitables** : aucun lien n'est inventé, une source n'est retenue que si elle fournit de vrais articles avec leur URL d'origine. L'outil de diagnostic teste depuis votre PC chaque source candidate (5 sites spécialisés et Google Actualités, interrogé pour chacune des 15 enseignes suivies). La liste est dans `news_franchise/sources/candidates.py`.
+
+### Lancer le diagnostic
+
+Double-cliquez sur **`diagnostiquer_sources.bat`** (connexion Internet requise, compter quelques minutes). La progression s'affiche dans la fenêtre, puis le rapport s'ouvre automatiquement.
+
+Équivalent en ligne de commande :
+
+```bat
+.venv\Scripts\python.exe -m news_franchise.tools.diagnose_sources
+.venv\Scripts\python.exe -m news_franchise.tools.diagnose_sources --only "AC Franchise"
+.venv\Scripts\python.exe -m news_franchise.tools.diagnose_sources --only "O'Tacos"
+.venv\Scripts\python.exe -m news_franchise.tools.diagnose_sources --no-google
+```
+
+L'outil est « poli » envers les sites : il s'annonce (`NewsFranchise/0.1.0 (veille interne)`), attend 1 seconde entre deux requêtes vers un même site, réessaie 2 fois au plus en cas d'erreur réseau, et respecte `robots.txt` pour les pages HTML. Une source en erreur n'interrompt jamais le diagnostic des autres.
+
+### Où trouver le rapport
+
+Dans le dossier `reports` des données (`%LOCALAPPDATA%\NewsFranchise\reports`) :
+
+| Fichier | Contenu |
+|---|---|
+| `sources-AAAAMMJJ-HHMM.md` | Rapport lisible : tableau de synthèse puis détail par source (flux trouvés, chiffres, titres d'exemple, liens testés, erreurs) |
+| `sources-AAAAMMJJ-HHMM.json` | Mêmes données, structurées |
+| `sources.proposed.yaml` | Proposition de configuration (remplacée à chaque diagnostic) |
+
+Le détail technique des erreurs est dans `logs\news_franchise.log`.
+
+### Lire les verdicts
+
+- **exploitable** : flux trouvé, au moins 80 % des articles ont un titre, une date et un lien, au moins un article publié depuis 30 jours, et les liens testés (3 par flux) répondent correctement.
+- **partiel** : flux trouvé, mais un critère manque ; la raison indique lequel (ex. « aucune date de publication », « aucun article depuis 30 jours »).
+- **inexploitable** : aucun flux trouvé, ou erreur (ex. « Le site a refusé l'accès (HTTP 403) »).
+
+Pour Google Actualités, le verdict est donné par enseigne puis globalement ; une enseigne sans article sur 30 jours n'est pas un défaut de la source. La ligne « Résolution des liens » indique si les liens Google mènent directement à l'article de l'éditeur (`resolved`) ou restent des liens `news.google.com` (`google_link_only`) : ce n'est pas bloquant, ces liens ouvrent bien le vrai article chez le lecteur.
+
+### Valider la proposition
+
+1. Relisez `sources.proposed.yaml` en vous aidant du rapport. Seules les sources « exploitable » y sont activées (`enabled: true`) ; une source sans flux a `url: null`.
+2. Ajustez si besoin (`enabled: true/false`, `note`), sans inventer d'URL : chaque adresse doit venir du diagnostic.
+3. Copiez le fichier vers **`config\sources.yaml`** dans le dossier du projet. C'est ce fichier que la collecte utilisera.
+
+Le format est documenté, champ par champ, dans `config/sources.example.yaml`.
+
 ## Tests
 
 Sous Windows, double-cliquez sur **`tests.bat`** : il installe les dépendances de test (`requirements-dev.txt`) puis lance `pytest`.
@@ -81,7 +128,7 @@ Ou en ligne de commande :
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Les tests n'écrivent que dans des dossiers temporaires (`tmp_path`) : ils ne touchent ni vos données ni le dossier du projet.
+Les tests n'écrivent que dans des dossiers temporaires (`tmp_path`) : ils ne touchent ni vos données ni le dossier du projet. Ils n'accèdent jamais au réseau : les sites et flux sont simulés (`respx`) à partir des fichiers de `tests/fixtures/`, et toute connexion réelle est bloquée.
 
 ## Arborescence
 
@@ -89,6 +136,7 @@ Les tests n'écrivent que dans des dossiers temporaires (`tmp_path`) : ils ne to
 NewsFranchise/
 ├── lancer.bat              # Lancement en double-clic (crée/met à jour .venv)
 ├── tests.bat               # Lancement des tests
+├── diagnostiquer_sources.bat # Diagnostic des sources de veille
 ├── requirements.txt        # Dépendances d'exécution (versions exactes)
 ├── requirements-dev.txt    # Dépendances de test (inclut requirements.txt)
 ├── pyproject.toml          # Métadonnées du projet et configuration de pytest
@@ -96,18 +144,33 @@ NewsFranchise/
 ├── .gitignore
 ├── .gitattributes          # Fins de ligne (CRLF pour les .bat)
 ├── README.md
+├── config/
+│   └── sources.example.yaml  # Format documenté de config/sources.yaml
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
 │   ├── __main__.py         # Point d'entrée : python -m news_franchise
 │   ├── config.py           # Settings et load_settings()
 │   ├── logging_setup.py    # Journal rotatif + console
 │   ├── dates.py            # Noms de mois en français
+│   ├── http_client.py      # Client HTTP poli (reprises, débit, robots.txt)
+│   ├── sources/
+│   │   ├── candidates.py   # Sources candidates et enseignes suivies
+│   │   ├── discovery.py    # Découverte des flux d'un site
+│   │   └── evaluation.py   # Évaluation d'un flux, Google Actualités, verdicts
+│   ├── tools/
+│   │   └── diagnose_sources.py  # Outil de diagnostic des sources
 │   ├── templates/          # Gabarits Jinja2 (base, accueil, erreur)
 │   └── static/             # Feuille de style
 └── tests/
-    ├── conftest.py         # Fixtures (données dans tmp_path)
+    ├── conftest.py         # Fixtures (données dans tmp_path, réseau interdit)
+    ├── helpers.py          # Données de référence et simulation HTTP (respx)
+    ├── fixtures/           # Pages HTML et flux RSS enregistrés
     ├── test_config.py
-    └── test_app.py
+    ├── test_app.py
+    ├── test_http_client.py
+    ├── test_discovery.py
+    ├── test_evaluation.py
+    └── test_diagnose_sources.py
 ```
 
 ## Conventions de développement

@@ -26,8 +26,11 @@ class PlainFormatter(logging.Formatter):
         return _ANSI_ESCAPE.sub("", super().format(record))
 
 
-def configure_logging(settings: Settings) -> Path:
+def configure_logging(settings: Settings, *, console: bool = True) -> Path:
     """Configure le logger racine et renvoie le chemin du fichier de log.
+
+    console=False n'écrit que dans le fichier (utile aux outils qui affichent
+    leur propre progression).
 
     La fonction est idempotente : un nouvel appel remplace les gestionnaires
     installés précédemment au lieu de les dupliquer.
@@ -45,9 +48,12 @@ def configure_logging(settings: Settings) -> Path:
         log_path, maxBytes=MAX_LOG_BYTES, backupCount=LOG_BACKUP_COUNT, encoding="utf-8"
     )
     file_handler.setFormatter(PlainFormatter(LOG_FORMAT))
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    for handler in (file_handler, console_handler):
+    handlers: list[logging.Handler] = [file_handler]
+    if console:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        handlers.append(console_handler)
+    for handler in handlers:
         setattr(handler, _HANDLER_MARKER, True)
         root.addHandler(handler)
 

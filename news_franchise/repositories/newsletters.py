@@ -133,7 +133,8 @@ def front_page_figures(conn: sqlite3.Connection, newsletter_id: int) -> FrontPag
         " (SELECT COUNT(*) FROM openings WHERE newsletter_id = :id) AS openings,"
         " (SELECT COUNT(DISTINCT lower(trim(brand_name))) FROM meetings"
         "   WHERE newsletter_id = :id) AS brands_met,"
-        " (SELECT COUNT(*) FROM franchisees WHERE newsletter_id = :id AND validated = 1)"
+        " (SELECT COUNT(*) FROM franchisees WHERE newsletter_id = :id AND validated = 1"
+        " AND dismissed = 0)"
         "   AS franchisees",
         {"id": newsletter_id},
     ).fetchone()

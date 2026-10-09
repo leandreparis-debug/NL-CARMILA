@@ -38,6 +38,8 @@ from news_franchise.collect.runner import (
 from news_franchise.config import ConfigError
 from news_franchise.dates import format_month_fr
 from news_franchise.db.connection import get_connection, get_db
+from news_franchise.detect.rules import DETECTION_RULES_FILE, PLACES_FILE
+from news_franchise.detect.runner import run_detection
 from news_franchise.http_client import Fetcher
 from news_franchise.models import validate_month
 from news_franchise.repositories import collection_runs, newsletters
@@ -110,6 +112,10 @@ def _run_job(app: Flask, job: CollectionJob) -> None:
                 fetcher=fetcher,
                 sources_path=app.config.get("NF_SOURCES_FILE", SOURCES_FILE),
                 rules_path=app.config.get("NF_RULES_FILE", RULES_FILE),
+                detection_rules_path=app.config.get(
+                    "NF_DETECTION_RULES_FILE", DETECTION_RULES_FILE
+                ),
+                places_path=app.config.get("NF_PLACES_FILE", PLACES_FILE),
                 on_progress=on_progress,
             )
         job.state = "done"
@@ -260,4 +266,48 @@ def status() -> ResponseReturnValue:
         month_label=month_label(job.month),
         summary=summary,
         refresh=REFRESH_SECONDS if job.state == "running" else None,
+    )
+
+
+@bp.post("/detection")
+def detect() -> ResponseReturnValue:
+    """Relance la détection (opportunités, franchisés) sur les articles du mois en base."""
+    raw_month = (request.form.get("mois") or "").strip()
+    try:
+        month = validate_month(raw_month)
+    except ValueError as exc:
+        return _detection_page(previous_month(_clock()), None, str(exc), 400)
+    job = _registry(current_app).job
+    busy = _running_elsewhere() or (
+        "Une collecte est en cours : relancez la détection quand elle sera terminée."
+        if job is not None and job.state == "running"
+        else None
+    )
+    if busy:
+        return _detection_page(month, None, busy, 409)
+    try:
+        report = run_detection(
+            get_db(),
+            month,
+            rules_path=current_app.config.get("NF_DETECTION_RULES_FILE", DETECTION_RULES_FILE),
+            places_path=current_app.config.get("NF_PLACES_FILE", PLACES_FILE),
+        )
+    except ConfigError as exc:
+        return _detection_page(month, None, str(exc), 400)
+    return _detection_page(month, report, None, 200)
+
+
+def _detection_page(
+    month: str, report: Any, error: str | None, status_code: int
+) -> ResponseReturnValue:
+    """Page du bilan de détection."""
+    return (
+        render_template(
+            "collect/detection.html",
+            month=month,
+            month_label=month_label(month),
+            report=report,
+            error=error,
+        ),
+        status_code,
     )

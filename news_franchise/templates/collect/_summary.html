@@ -24,6 +24,19 @@
     </table>
   {% endif %}
 
+  {% if stats.detection %}
+    {% set d = stats.detection %}
+    <h3>Détection</h3>
+    <table class="figures">
+      <tr><th>Opportunités détectées</th><td>{{ d.opportunities }}</td></tr>
+      <tr><th>Franchisés candidats (haute / moyenne / basse)</th>
+        <td>{{ d.franchisees.haute }} / {{ d.franchisees.moyenne }} / {{ d.franchisees.basse }}</td></tr>
+      <tr><th>Phrases déclencheuses sans nom</th><td>{{ d.triggers_without_name }}</td></tr>
+    </table>
+  {% elif stats.detection_error %}
+    <p class="alert">{{ stats.detection_error }}</p>
+  {% endif %}
+
   {% if summary.errors %}
     <h3>Sources en erreur</h3>
     <ul class="errors">

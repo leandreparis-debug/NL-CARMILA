@@ -1,0 +1,65 @@
+# Cas étiquetés pour la détection (phrases réalistes inventées pour les tests ; aucun lien).
+# opportunity : l'article doit-il être marqué « opportunité » ?
+# franchisee : fiche attendue (null = aucune fiche) ; unnamed : phrases déclencheuses sans nom.
+# article_brand : enseigne attribuée à l'article par la collecte (rubrique 2), facultatif.
+cases:
+  - id: opportunite_expression_forte
+    text: "Pokawa recherche des emplacements en centre commercial."
+    opportunity: true
+  - id: opportunite_exclusion_fermeture
+    text: "Pokawa ferme son restaurant du centre commercial de Rosny."
+    opportunity: false
+  - id: opportunite_termes_dans_deux_phrases
+    text: "Pokawa recherche des emplacements. Les centres commerciaux restent sa cible."
+    opportunity: false
+  - id: opportunite_recherche_et_lieu
+    text: "L'enseigne prospecte activement les galeries marchandes du Sud-Ouest."
+    opportunity: true
+  - id: opportunite_appel_aux_bailleurs
+    text: "Chopstix lance un appel aux bailleurs pour accélérer son maillage."
+    opportunity: true
+  - id: opportunite_retail_park
+    text: "La marque est en quête d'emplacements en retail park et en zone commerciale."
+    opportunity: true
+  - id: piege_lieu_seul
+    text: "Le centre commercial a accueilli trois millions de visiteurs cette année."
+    opportunity: false
+  - id: piege_recherche_sans_lieu
+    text: "Le groupe recherche des emplacements de parking pour ses salariés."
+    opportunity: false
+  - id: franchise_complet_haute
+    text: "Jean Dupont, multi-franchisé O'Tacos à la tête de cinq restaurants en Occitanie."
+    franchisee: {name: Jean Dupont, brands: ["O'Tacos"], location: Occitanie, store_count: 5, confidence: haute}
+  - id: franchise_societe_groupe
+    text: "Le groupe Bertrand exploite déjà douze établissements Burger King dans le Rhône."
+    franchisee: {name: Groupe Bertrand, brands: [], location: Rhône, store_count: 12, confidence: basse}
+  - id: franchise_moyenne_sans_nombre
+    text: "Selon Marie-Claire Martin, franchisée de Pokawa à Lyon, l'enseigne va vite."
+    franchisee: {name: Marie-Claire Martin, brands: [Pokawa], location: Lyon, store_count: null, confidence: moyenne}
+  - id: franchise_sans_nom
+    text: "Un multi-franchisé ouvre son troisième restaurant à Nantes."
+    unnamed: 1
+  - id: franchise_societe_et_lettres
+    text: "La société JD Food, franchisé du Comptoir de Mathilde, possède déjà 4 boutiques dans les Hauts-de-France."
+    franchisee: {name: JD Food, brands: [Comptoir de Mathilde], location: Hauts-de-France, store_count: 4, confidence: haute}
+  - id: franchise_nom_dans_phrase_voisine
+    text: "Thomas Leroy vient d'ouvrir à Lille. Ce franchisé de Burger King exploite 7 restaurants."
+    franchisee: {name: Thomas Leroy, brands: [Burger King], location: Lille, store_count: 7, confidence: haute}
+  - id: piege_franchise_sans_accent
+    text: "La franchise de Pokawa séduit les investisseurs à Lyon."
+  - id: piege_enseigne_prise_pour_un_nom
+    text: "Jeff de Bruges est à la tête de 500 boutiques en France."
+    unnamed: 1
+  - id: franchise_suffixe_sas
+    text: "Le franchisé de Nice, Ma Petite Entreprise SAS, possède déjà trois restaurants Pokawa."
+    franchisee: {name: Ma Petite Entreprise SAS, brands: [Pokawa], location: null, store_count: 3, confidence: haute}
+  - id: franchise_dix_sept_en_lettres
+    text: "Nadia Benali, multifranchisée Easy Cash, exploite dix-sept magasins dans le Nord."
+    franchisee: {name: Nadia Benali, brands: [Easy Cash], location: Nord, store_count: 17, confidence: haute}
+  - id: franchise_enseigne_de_l_article
+    text: "Paul Martin, multi-franchisé, vise désormais la Bretagne."
+    article_brand: Leonidas
+    franchisee: {name: Paul Martin, brands: [Leonidas], location: null, store_count: null, confidence: moyenne}
+  - id: franchise_adopt_majuscule
+    text: "Après avoir adopté le concept, Luc Bernard, franchisé d'Adopt, ouvre son deuxième magasin à Reims."
+    franchisee: {name: Luc Bernard, brands: [Adopt], location: Reims, store_count: null, confidence: moyenne}

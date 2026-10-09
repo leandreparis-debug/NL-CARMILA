@@ -22,6 +22,19 @@ ARTICLE_RUBRICS = (RUBRIC_NEW_FRANCHISES, RUBRIC_BRAND_NEWS)
 RUN_STATUSES = ("running", "success", "partial", "failed")
 RUN_FINAL_STATUSES = ("success", "partial", "failed")
 BODY_TEXT_MAX_LENGTH = 20_000
+EVIDENCE_MAX_LENGTH = 400
+OPPORTUNITY_SOURCES = ("auto", "manual")
+CONFIDENCE_LEVELS = ("haute", "moyenne", "basse")
+
+
+def clip_evidence(text: str | None) -> str | None:
+    """Phrase justificative limitée à 400 caractères (coupée avec « … » si besoin)."""
+    if text is None:
+        return None
+    text = " ".join(text.split())
+    if len(text) <= EVIDENCE_MAX_LENGTH:
+        return text
+    return text[: EVIDENCE_MAX_LENGTH - 1].rstrip() + "…"
 
 
 # --------------------------------------------------------------------------- validation
@@ -158,12 +171,22 @@ class Article:
     position: int | None = None
     collected_at: datetime | None = None
     body_text: str | None = None  # texte brut de l'article, jamais affiché tel quel
+    # Repère « opportunité » : None = jamais évalué, "auto" = posé par la détection,
+    # "manual" = modifié à la main (la détection n'y touche plus).
+    opportunity_source: str | None = None
+    opportunity_evidence: str | None = None  # phrase justificative (≤ 400 caractères)
+    opportunity_terms: list[str] = field(default_factory=list)
     id: int | None = None
 
     def __post_init__(self) -> None:
         """Valide la rubrique, le titre, la source, l'URL et la position ; tronque body_text."""
         if self.body_text is not None:
             self.body_text = self.body_text[:BODY_TEXT_MAX_LENGTH]
+        if self.opportunity_source not in (None, *OPPORTUNITY_SOURCES):
+            raise ValueError(
+                f"Origine du repère opportunité invalide : {self.opportunity_source!r}."
+            )
+        self.opportunity_evidence = clip_evidence(self.opportunity_evidence)
         if self.rubric not in ARTICLE_RUBRICS:
             raise ValueError(f"Rubrique d'article invalide : {self.rubric!r} (1 ou 2).")
         self.title = _require_text(self.title, "titre")
@@ -189,10 +212,19 @@ class Franchisee:
     article_id: int | None = None
     validated: bool = False
     position: int | None = None
+    # Détection automatique : confidence None = fiche saisie à la main.
+    confidence: str | None = None  # "haute", "moyenne" ou "basse"
+    evidence: str | None = None  # phrase de l'article qui justifie la fiche (≤ 400 car.)
+    trigger_terms: list[str] = field(default_factory=list)
+    edited: bool = False  # modifiée à la main : la détection n'y touche plus
+    dismissed: bool = False  # suggestion écartée par l'utilisateur : jamais recréée
     id: int | None = None
 
     def __post_init__(self) -> None:
         """Valide le nom, la source, l'URL de la source et le nombre de points de vente."""
+        if self.confidence not in (None, *CONFIDENCE_LEVELS):
+            raise ValueError(f"Niveau de confiance invalide : {self.confidence!r}.")
+        self.evidence = clip_evidence(self.evidence)
         self.name = _require_text(self.name, "nom du franchisé")
         self.source_name = _require_text(self.source_name, "source")
         self.source_url = validate_url(self.source_url, "source_url")

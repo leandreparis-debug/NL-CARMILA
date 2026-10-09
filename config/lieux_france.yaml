@@ -1,0 +1,234 @@
+# Lieux reconnus pour la « ville ou région » des franchisés identifiés.
+# Un lieu est repéré après « à », « au », « aux », « en », « dans le/la/les/l' »
+# (ex. « à Lyon », « en Occitanie », « dans le Rhône », « dans les Hauts-de-France »).
+# Liste de départ : 13 régions métropolitaines, 96 départements métropolitains et les
+# 100 plus grandes communes de France métropolitaine (ordre de grandeur, à compléter
+# librement : une ligne « - Nom » par lieu, avec majuscules et accents).
+
+regions:
+  - name: Auvergne-Rhône-Alpes
+    aliases: [AURA]
+  - name: Bourgogne-Franche-Comté
+    aliases: []
+  - name: Bretagne
+    aliases: []
+  - name: Centre-Val de Loire
+    aliases: []
+  - name: Corse
+    aliases: []
+  - name: Grand Est
+    aliases: []
+  - name: Hauts-de-France
+    aliases: []
+  - name: Île-de-France
+    aliases: [région parisienne]
+  - name: Normandie
+    aliases: []
+  - name: Nouvelle-Aquitaine
+    aliases: []
+  - name: Occitanie
+    aliases: []
+  - name: Pays de la Loire
+    aliases: []
+  - name: Provence-Alpes-Côte d'Azur
+    aliases: [PACA, Région Sud]
+
+departements:
+  - Ain
+  - Aisne
+  - Allier
+  - Alpes-de-Haute-Provence
+  - Hautes-Alpes
+  - Alpes-Maritimes
+  - Ardèche
+  - Ardennes
+  - Ariège
+  - Aube
+  - Aude
+  - Aveyron
+  - Bouches-du-Rhône
+  - Calvados
+  - Cantal
+  - Charente
+  - Charente-Maritime
+  - Cher
+  - Corrèze
+  - Corse-du-Sud
+  - Haute-Corse
+  - Côte-d'Or
+  - Côtes-d'Armor
+  - Creuse
+  - Dordogne
+  - Doubs
+  - Drôme
+  - Eure
+  - Eure-et-Loir
+  - Finistère
+  - Gard
+  - Haute-Garonne
+  - Gers
+  - Gironde
+  - Hérault
+  - Ille-et-Vilaine
+  - Indre
+  - Indre-et-Loire
+  - Isère
+  - Jura
+  - Landes
+  - Loir-et-Cher
+  - Loire
+  - Haute-Loire
+  - Loire-Atlantique
+  - Loiret
+  - Lot
+  - Lot-et-Garonne
+  - Lozère
+  - Maine-et-Loire
+  - Manche
+  - Marne
+  - Haute-Marne
+  - Mayenne
+  - Meurthe-et-Moselle
+  - Meuse
+  - Morbihan
+  - Moselle
+  - Nièvre
+  - Nord
+  - Oise
+  - Orne
+  - Pas-de-Calais
+  - Puy-de-Dôme
+  - Pyrénées-Atlantiques
+  - Hautes-Pyrénées
+  - Pyrénées-Orientales
+  - Bas-Rhin
+  - Haut-Rhin
+  - Rhône
+  - Haute-Saône
+  - Saône-et-Loire
+  - Sarthe
+  - Savoie
+  - Haute-Savoie
+  - Paris
+  - Seine-Maritime
+  - Seine-et-Marne
+  - Yvelines
+  - Deux-Sèvres
+  - Somme
+  - Tarn
+  - Tarn-et-Garonne
+  - Var
+  - Vaucluse
+  - Vendée
+  - Vienne
+  - Haute-Vienne
+  - Vosges
+  - Yonne
+  - Territoire de Belfort
+  - Essonne
+  - Hauts-de-Seine
+  - Seine-Saint-Denis
+  - Val-de-Marne
+  - Val-d'Oise
+
+villes:
+  - Paris
+  - Marseille
+  - Lyon
+  - Toulouse
+  - Nice
+  - Nantes
+  - Montpellier
+  - Strasbourg
+  - Bordeaux
+  - Lille
+  - Rennes
+  - Toulon
+  - Reims
+  - Saint-Étienne
+  - Le Havre
+  - Villeurbanne
+  - Dijon
+  - Grenoble
+  - Angers
+  - Nîmes
+  - Clermont-Ferrand
+  - Aix-en-Provence
+  - Le Mans
+  - Brest
+  - Tours
+  - Amiens
+  - Limoges
+  - Annecy
+  - Boulogne-Billancourt
+  - Perpignan
+  - Metz
+  - Besançon
+  - Orléans
+  - Rouen
+  - Saint-Denis
+  - Argenteuil
+  - Montreuil
+  - Mulhouse
+  - Caen
+  - Nancy
+  - Tourcoing
+  - Roubaix
+  - Nanterre
+  - Vitry-sur-Seine
+  - Créteil
+  - Avignon
+  - Poitiers
+  - Aubervilliers
+  - Asnières-sur-Seine
+  - Dunkerque
+  - Aulnay-sous-Bois
+  - Colombes
+  - Versailles
+  - Courbevoie
+  - Béziers
+  - Rueil-Malmaison
+  - La Rochelle
+  - Champigny-sur-Marne
+  - Pau
+  - Cherbourg-en-Cotentin
+  - Mérignac
+  - Antibes
+  - Saint-Maur-des-Fossés
+  - Ajaccio
+  - Cannes
+  - Saint-Nazaire
+  - Drancy
+  - Noisy-le-Grand
+  - Issy-les-Moulineaux
+  - Cergy
+  - Levallois-Perret
+  - Colmar
+  - Calais
+  - Pessac
+  - Vénissieux
+  - Évry-Courcouronnes
+  - Clichy
+  - Quimper
+  - Ivry-sur-Seine
+  - Valence
+  - Bourges
+  - Antony
+  - La Seyne-sur-Mer
+  - Montauban
+  - Troyes
+  - Villeneuve-d'Ascq
+  - Pantin
+  - Chambéry
+  - Niort
+  - Neuilly-sur-Seine
+  - Sarcelles
+  - Fréjus
+  - Lorient
+  - Beauvais
+  - Hyères
+  - Narbonne
+  - Vannes
+  - Maisons-Alfort
+  - Meaux
+  - La Roche-sur-Yon

@@ -1,0 +1,263 @@
+# Règles de détection : repère « opportunité » et franchisés identifiés (rubrique 5).
+#
+# Aucune IA : la détection applique ces listes telles quelles, phrase par phrase, sur le
+# titre, les premières lignes et le texte de chaque article du mois. Chaque détection
+# garde la phrase qui la justifie et les termes trouvés, pour pouvoir la vérifier.
+#
+# Comparaison des termes : la casse, les accents et le type d'apostrophe (' ou ’) ne
+# comptent pas ; le terme doit être un mot entier ; le pluriel en s ou x du dernier mot
+# est accepté (« centre commercial » ne trouve PAS « centres commerciaux » : ajoutez les
+# deux formes quand le pluriel change plusieurs mots).
+#
+# Pour ajouter un mot-clé : ajoutez une ligne « - expression » dans la bonne liste (même
+# indentation, 2 espaces par niveau), enregistrez, puis relancez la détection (bouton
+# « Relancer la détection » ou python -m news_franchise.tools.detect --month AAAA-MM).
+# Un fichier invalide est refusé avec un message, sans rien modifier en base.
+
+# ---------------------------------------------------------------------------------------
+# Repère « opportunité » : l'enseigne cherche des emplacements.
+# Un article est marqué si UNE MÊME PHRASE contient un terme de « search_terms » ET un
+# terme de « place_terms », ou si une phrase contient une expression de « strong_terms ».
+# Une phrase qui contient une expression d'« exclusions » est ignorée.
+opportunity:
+  # Exemple : « L'enseigne RECHERCHE DES EMPLACEMENTS pour ses prochaines ouvertures. »
+  search_terms:
+    - recherche des emplacements
+    - recherche d'emplacements
+    - recherche emplacements
+    - recherche de nouveaux emplacements
+    - cherche des emplacements
+    - cherche des locaux
+    - recherche des locaux
+    - recherche de locaux
+    - en quête d'emplacements
+    - en quête de locaux
+    - prospecte
+    - prospectent
+    - vise de nouvelles implantations
+    - souhaite s'implanter
+    - cherche à s'implanter
+
+  # Exemple : « … de nouvelles implantations en CENTRE COMMERCIAL. »
+  place_terms:
+    - centre commercial
+    - centres commerciaux
+    - galerie marchande
+    - galeries marchandes
+    - retail park
+    - zone commerciale
+    - zones commerciales
+    - parc commercial
+    - parcs commerciaux
+    - pied d'immeuble
+    - pieds d'immeubles
+    - emplacement n°1
+    - emplacements n°1
+
+  # Exemple : « La marque lance un APPEL AUX BAILLEURS. » (suffit à elle seule)
+  strong_terms:
+    - recherche des emplacements en centre commercial
+    - recherche des emplacements en centres commerciaux
+    - recherche d'emplacements en centre commercial
+    - recherche d'emplacements en centres commerciaux
+    - appel aux bailleurs
+    - recherche de locaux commerciaux
+    - recherche des locaux commerciaux
+
+  # Exemple : « L'enseigne FERME SON MAGASIN DU CENTRE COMMERCIAL de Rosny. » (ignorée)
+  exclusions:
+    - ferme son magasin du centre commercial
+    - ferme son restaurant du centre commercial
+    - ferme sa boutique du centre commercial
+    - fermeture du centre commercial
+    - quitte le centre commercial
+
+# ---------------------------------------------------------------------------------------
+# Franchisés identifiés : phrases déclencheuses, puis extraction dans la phrase et ses
+# voisines : nom (personne ou société), enseigne(s), ville ou région, nombre de points de
+# vente. Sans nom trouvé, aucune fiche n'est créée (comptée dans le bilan).
+franchisee:
+  # Expressions régulières. Les majuscules et le type d'apostrophe ne comptent pas, mais
+  # les ACCENTS COMPTENT (« franchisé » n'est pas « franchise »). Raccourcis :
+  #   {n}       un nombre en chiffres ou en lettres (de « deux » à « vingt ») ;
+  #   {ordinal} un rang : « 3e », « 3ème », « troisième »… ;
+  #   {unit}    un mot de « store_units » (restaurants, magasins…).
+  # Exemple : « Jean Dupont, À LA TÊTE DE cinq restaurants O'Tacos… »
+  trigger_patterns:
+    - "multi[- ]?franchisée?s?"
+    - "franchisée?s? (?:de|du|des|d')"
+    - "à la tête de {n}"
+    - "exploite (?:déjà |aujourd'hui |désormais |actuellement )?{n}"
+    - "possède (?:déjà |aujourd'hui |désormais )?{n}"
+    - "détient (?:déjà |aujourd'hui )?{n}"
+    - "son {ordinal} {unit}"
+    - "ouvre son {ordinal}"
+
+  # Mots qui suivent un nombre de points de vente. Exemple : « cinq RESTAURANTS ».
+  store_units:
+    - restaurants
+    - restaurant
+    - magasins
+    - magasin
+    - points de vente
+    - point de vente
+    - boutiques
+    - boutique
+    - unités
+    - unité
+    - établissements
+    - établissement
+    - franchises
+    - franchise
+
+  # Nombres écrits en lettres. Exemple : « à la tête de DOUZE magasins ».
+  number_words:
+    deux: 2
+    trois: 3
+    quatre: 4
+    cinq: 5
+    six: 6
+    sept: 7
+    huit: 8
+    neuf: 9
+    dix: 10
+    onze: 11
+    douze: 12
+    treize: 13
+    quatorze: 14
+    quinze: 15
+    seize: 16
+    dix-sept: 17
+    dix-huit: 18
+    dix-neuf: 19
+    vingt: 20
+
+  # Rangs écrits en lettres. Exemple : « ouvre son TROISIÈME restaurant ».
+  ordinal_words:
+    - deuxième
+    - second
+    - seconde
+    - troisième
+    - quatrième
+    - cinquième
+    - sixième
+    - septième
+    - huitième
+    - neuvième
+    - dixième
+    - onzième
+    - douzième
+    - treizième
+    - quatorzième
+    - quinzième
+    - seizième
+    - dix-septième
+    - dix-huitième
+    - dix-neuvième
+    - vingtième
+
+  # Mots qui introduisent un nom de société. Exemple : « LE GROUPE Bertrand ».
+  company_markers:
+    - la société
+    - le groupe
+    - la holding
+    - l'entreprise
+
+  # Formes juridiques qui suivent un nom de société. Exemple : « JD Food SAS ».
+  company_suffixes:
+    - SAS
+    - SASU
+    - SARL
+    - EURL
+    - SA
+
+  # Mots à majuscule qui ne sont jamais un nom de personne (débuts de phrase, titres,
+  # jours, mois…). Exemple : dans « SELON Jean Dupont », seul « Jean Dupont » est gardé.
+  name_stopwords:
+    - Le
+    - La
+    - Les
+    - Un
+    - Une
+    - Des
+    - Du
+    - De
+    - Ce
+    - Cet
+    - Cette
+    - Ces
+    - Son
+    - Sa
+    - Ses
+    - Leur
+    - Leurs
+    - Au
+    - Aux
+    - En
+    - Dans
+    - Pour
+    - Par
+    - Sur
+    - Avec
+    - Selon
+    - Après
+    - Avant
+    - Depuis
+    - Chez
+    - Entre
+    - Et
+    - Ou
+    - Mais
+    - Ainsi
+    - Alors
+    - Déjà
+    - Désormais
+    - Aujourd
+    - Il
+    - Elle
+    - Ils
+    - Elles
+    - "On"
+    - Nous
+    - Vous
+    - Monsieur
+    - Madame
+    - Groupe
+    - Société
+    - Holding
+    - Franchise
+    - Franchisé
+    - Franchisée
+    - Carmila
+    - France
+    - Directeur
+    - Directrice
+    - Président
+    - Présidente
+    - Fondateur
+    - Fondatrice
+    - Gérant
+    - Gérante
+    - Saint
+    - Sainte
+    - Rue
+    - Avenue
+    - Lundi
+    - Mardi
+    - Mercredi
+    - Jeudi
+    - Vendredi
+    - Samedi
+    - Dimanche
+    - Janvier
+    - Février
+    - Mars
+    - Avril
+    - Mai
+    - Juin
+    - Juillet
+    - Août
+    - Septembre
+    - Octobre
+    - Novembre
+    - Décembre

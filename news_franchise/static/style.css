@@ -115,3 +115,6 @@ table.figures td { text-align: right; font-weight: 600; }
 .status-failed { color: var(--accent); }
 
 progress { width: 100%; max-width: 480px; }
+
+ul.evidence li { margin-bottom: 0.9rem; }
+ul.evidence q { color: #374151; font-style: italic; }

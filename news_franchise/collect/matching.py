@@ -70,6 +70,16 @@ class BrandMatcher:
             flags = 0 if brand.case_sensitive else re.IGNORECASE
             self._patterns.append((brand, re.compile(pattern, flags), brand.case_sensitive))
 
+    def find_all(self, text: str) -> list[Brand]:
+        """Toutes les enseignes citées dans le texte, dans l'ordre d'apparition."""
+        lowered, kept = fold(text), fold(text, keep_case=True)
+        found: list[tuple[int, Brand]] = []
+        for brand, pattern, case_sensitive in self._patterns:
+            match = pattern.search(kept if case_sensitive else lowered)
+            if match:
+                found.append((match.start(), brand))
+        return [brand for _, brand in sorted(found, key=lambda item: item[0])]
+
     def find(self, text: str) -> BrandMatch | None:
         """Première enseigne citée dans le texte (la plus tôt), ou None."""
         best: BrandMatch | None = None
@@ -86,8 +96,16 @@ class TermMatcher:
 
     def __init__(self, terms: Sequence[str]) -> None:
         """Compile un motif unique pour toutes les expressions."""
-        variants = sorted({fold(t) for t in terms if t.strip()}, key=len, reverse=True)
+        originals: dict[str, str] = {}
+        for term in terms:
+            if term.strip():
+                originals.setdefault(fold(term), term.strip())
+        variants = sorted(originals, key=len, reverse=True)
         self.terms = tuple(variants)
+        self._each = [
+            (originals[v], re.compile(_phrase_pattern(v, case_sensitive=False, plural=True), re.I))
+            for v in variants
+        ]
         self._pattern = (
             re.compile(
                 "|".join(_phrase_pattern(v, case_sensitive=False, plural=True) for v in variants),
@@ -103,6 +121,20 @@ class TermMatcher:
             return None
         match = self._pattern.search(fold(text))
         return match.group(0) if match else None
+
+    def find_all(self, text: str) -> list[str]:
+        """Expressions trouvées (telles qu'écrites dans la configuration), dans l'ordre
+        d'apparition, sans doublon ; une expression incluse dans une plus longue déjà
+        trouvée au même endroit n'est pas répétée."""
+        folded = fold(text)
+        hits: list[tuple[int, int, str]] = []
+        for original, pattern in self._each:  # du plus long au plus court
+            for match in pattern.finditer(folded):
+                start, end = match.span()
+                if not any(s <= start and end <= e for s, e, _ in hits):
+                    hits.append((start, end, original))
+        ordered = sorted(hits)
+        return list(dict.fromkeys(original for _, _, original in ordered))
 
     def remove(self, text: str) -> str:
         """Texte replié dont toutes les occurrences des expressions ont été retirées."""

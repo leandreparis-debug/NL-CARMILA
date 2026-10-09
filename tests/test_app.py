@@ -19,6 +19,7 @@ from news_franchise.db.connection import (
     db_path,
     get_connection,
     get_db,
+    list_migrations,
 )
 from news_franchise.repositories import brands
 
@@ -76,7 +77,7 @@ def test_format_month_fr() -> None:
 def test_app_creates_database_with_brands(app: Flask, settings: Settings) -> None:
     assert db_path(settings).is_file()
     with closing(get_connection(settings)) as conn:
-        assert current_version(conn) == 3
+        assert current_version(conn) == list_migrations()[-1].version
         assert len(brands.list_all(conn, tracked_only=True)) == 15
 
 

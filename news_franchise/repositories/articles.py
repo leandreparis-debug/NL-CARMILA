@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import sqlite3
 from collections.abc import Sequence
 
 from news_franchise.db.connection import transaction
-from news_franchise.models import ARTICLE_RUBRICS, Article
+from news_franchise.models import ARTICLE_RUBRICS, Article, clip_evidence
 from news_franchise.repositories import _common
 from news_franchise.repositories._common import (
     from_iso_datetime,
@@ -17,7 +18,8 @@ from news_franchise.repositories._common import (
 
 _COLUMNS = (
     "id, newsletter_id, rubric, brand_id, sector, title, published_at, source_name, url,"
-    " excerpt, is_opportunity, selected, position, collected_at, body_text"
+    " excerpt, is_opportunity, selected, position, collected_at, body_text,"
+    " opportunity_source, opportunity_evidence, opportunity_terms"
 )
 _SCOPE = "newsletter_id = ? AND rubric = ?"
 
@@ -40,6 +42,9 @@ def _from_row(row: sqlite3.Row) -> Article:
         position=row["position"],
         collected_at=from_iso_datetime(row["collected_at"]),
         body_text=row["body_text"],
+        opportunity_source=row["opportunity_source"],
+        opportunity_evidence=row["opportunity_evidence"],
+        opportunity_terms=json.loads(row["opportunity_terms"]),
     )
 
 
@@ -116,7 +121,10 @@ def list_for_rubric(
 
 
 def update(conn: sqlite3.Connection, article: Article) -> Article:
-    """Enregistre les modifications d'un article existant.
+    """Enregistre les modifications d'un article existant (modification par l'utilisateur).
+
+    Si le repère « opportunité » change, il passe en origine « manual » : la détection
+    automatique n'y touchera plus. La preuve de détection n'est pas modifiée.
 
     ValueError si l'URL est déjà utilisée par un autre article du même mois ;
     LookupError si l'article n'existe pas.
@@ -127,6 +135,8 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
         cursor = conn.execute(
             "UPDATE articles SET newsletter_id = ?, rubric = ?, brand_id = ?, sector = ?,"
             " title = ?, published_at = ?, source_name = ?, url = ?, excerpt = ?,"
+            " opportunity_source = CASE WHEN is_opportunity <> ? THEN 'manual'"
+            " ELSE opportunity_source END,"
             " is_opportunity = ?, selected = ?, position = COALESCE(?, position),"
             " body_text = ? WHERE id = ?",
             (
@@ -139,6 +149,7 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
                 article.source_name,
                 article.url,
                 article.excerpt,
+                int(article.is_opportunity),
                 int(article.is_opportunity),
                 int(article.selected),
                 article.position,
@@ -155,6 +166,50 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
     updated = get(conn, article_id)
     assert updated is not None
     return updated
+
+
+def set_opportunity(conn: sqlite3.Connection, article_id: int, is_opportunity: bool) -> None:
+    """Pose ou retire le repère « opportunité » à la main (origine « manual » : la détection
+    automatique ne modifiera plus cet article)."""
+    conn.execute(
+        "UPDATE articles SET is_opportunity = ?, opportunity_source = 'manual' WHERE id = ?",
+        (int(is_opportunity), article_id),
+    )
+
+
+def apply_auto_opportunity(
+    conn: sqlite3.Connection,
+    article_id: int,
+    is_opportunity: bool,
+    evidence: str | None,
+    terms: Sequence[str],
+) -> bool:
+    """Enregistre le résultat de la détection automatique (origine « auto »).
+
+    Ne fait rien si le repère a été modifié à la main ; renvoie True si l'article a été
+    mis à jour.
+    """
+    cursor = conn.execute(
+        "UPDATE articles SET is_opportunity = ?, opportunity_source = 'auto',"
+        " opportunity_evidence = ?, opportunity_terms = ?"
+        " WHERE id = ? AND COALESCE(opportunity_source, '') <> 'manual'",
+        (
+            int(is_opportunity),
+            clip_evidence(evidence) if is_opportunity else None,
+            json.dumps(list(terms) if is_opportunity else [], ensure_ascii=False),
+            article_id,
+        ),
+    )
+    return cursor.rowcount > 0
+
+
+def list_for_newsletter(conn: sqlite3.Connection, newsletter_id: int) -> list[Article]:
+    """Tous les articles d'une newsletter (rubrique 1 puis 2, dans l'ordre d'affichage)."""
+    rows = conn.execute(
+        f"SELECT {_COLUMNS} FROM articles WHERE newsletter_id = ? ORDER BY rubric, position, id",
+        (newsletter_id,),
+    )
+    return [_from_row(row) for row in rows]
 
 
 def set_selected(conn: sqlite3.Connection, article_id: int, selected: bool) -> None:

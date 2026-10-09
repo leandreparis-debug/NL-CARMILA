@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale et collecte de la veille. Les boutons Relire, Contenu interne et Exporter sont encore désactivés.
+> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille et détection des franchisés et opportunités. Les boutons Relire, Contenu interne et Exporter sont encore désactivés.
 
 ## Prérequis
 
@@ -153,6 +153,31 @@ Les listes de mots-clés sont dans **`config\regles_veille.yaml`** (commenté) :
 
 Pour une enseigne dont le nom est aussi un mot courant, mettez `case_sensitive: true` dans `config\enseignes.yaml` : la majuscule initiale sera exigée (c'est le cas d'Adopt, pour ne pas confondre avec « adopter »). Les changements s'appliquent aux collectes suivantes ; les articles déjà collectés ne sont pas reclassés.
 
+## Franchisés et opportunités
+
+Après chaque collecte, l'application propose automatiquement :
+
+- un **repère « opportunité »** sur les articles où une enseigne cherche des emplacements (notamment en centre commercial) ;
+- des **franchisés identifiés** (rubrique 5) : nom, enseigne(s), ville ou région, nombre de points de vente (vide s'il n'est pas dans l'article), source = l'article d'origine.
+
+Chaque détection est justifiée par **la phrase de l'article** qui l'a déclenchée. Les franchisés sont des **suggestions à valider** ; leur niveau de confiance (haute, moyenne, basse) indique si la fiche est complète. Rien n'est inventé : sans nom dans l'article, aucune fiche n'est créée.
+
+- **Relancer la détection** : bouton « Relancer la détection » sur la page « Collecter la veille », ou :
+
+  ```bat
+  .venv\Scripts\python.exe -m news_franchise.tools.detect --month 2026-10
+  ```
+
+  Un franchisé validé, modifié ou écarté et un repère « opportunité » modifié à la main ne sont jamais touchés.
+- **Mesurer la fiabilité** sur un mois réel :
+
+  ```bat
+  .venv\Scripts\python.exe -m news_franchise.tools.evaluate_detection --month 2026-10
+  ```
+
+  Le rapport (`%LOCALAPPDATA%\NewsFranchise\reports\detection-…md`) liste chaque détection avec sa phrase et une case « juste / faux » à cocher, ainsi que les articles non marqués qui contiennent un terme (oublis possibles). Il sert à décider si le repère « opportunité » est assez fiable pour être gardé.
+- **Ajuster les règles** : `config\regles_detection.yaml` (mots-clés, commenté) et `config\lieux_france.yaml` (villes, départements, régions). Fonctionnement, confiance et limites : [`docs/detection.md`](docs/detection.md).
+
 ## Tester les sources de veille
 
 La veille ne repose que sur des flux d'actualité **réellement exploitables** : aucun lien n'est inventé, une source n'est retenue que si elle fournit de vrais articles avec leur URL d'origine. L'outil de diagnostic teste depuis votre PC chaque source candidate (5 sites spécialisés et Google Actualités, interrogé pour chacune des 15 enseignes suivies). La liste est dans `news_franchise/sources/candidates.py`.
@@ -231,9 +256,12 @@ NewsFranchise/
 ├── config/
 │   ├── enseignes.yaml      # Référentiel des 15 enseignes suivies
 │   ├── regles_veille.yaml  # Mots-clés de tri de la veille (rubrique 1, exclusions)
+│   ├── regles_detection.yaml # Règles « opportunité » et franchisés
+│   ├── lieux_france.yaml   # Régions, départements, grandes villes
 │   └── sources.example.yaml  # Format documenté de config/sources.yaml
 ├── docs/
-│   └── data-model.md       # Modèle de données et procédure de migration
+│   ├── data-model.md       # Modèle de données et procédure de migration
+│   └── detection.md        # Détection des opportunités et des franchisés
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
 │   ├── __main__.py         # Point d'entrée : python -m news_franchise
@@ -259,9 +287,12 @@ NewsFranchise/
 │   │   ├── excerpt.py      # Premières lignes et texte brut des articles
 │   │   ├── runner.py       # Orchestrateur run_collection()
 │   │   └── views.py        # Pages web /collecte
+│   ├── detect/             # Détection : règles, phrases, lieux, opportunités, franchisés
 │   ├── tools/
 │   │   ├── diagnose_sources.py  # Outil de diagnostic des sources
-│   │   └── collect.py      # Collecte en ligne de commande
+│   │   ├── collect.py      # Collecte en ligne de commande
+│   │   ├── detect.py       # Détection en ligne de commande
+│   │   └── evaluate_detection.py  # Rapport de fiabilité de la détection
 │   ├── templates/          # Gabarits Jinja2 (base, accueil, erreur)
 │   └── static/             # Feuille de style
 └── tests/
@@ -276,6 +307,7 @@ NewsFranchise/
     ├── test_collect_units.py
     ├── test_collect_runner.py
     ├── test_collect_web.py
+    ├── test_detection.py   # dont les cas étiquetés de fixtures/detection_cases.yaml
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

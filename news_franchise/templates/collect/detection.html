@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Détection {{ month_label }} — News Franchise{% endblock %}
+{% block content %}
+  <h1>Détection : {{ month_label }}</h1>
+  {% if error %}<p class="alert">{{ error }}</p>{% endif %}
+  {% if report %}
+    {% set by_conf = report.by_confidence %}
+    <p>{{ report.articles_analysed }} article(s) analysé(s). Les franchisés détectés sont des
+      <strong>suggestions à valider</strong> ; chaque détection est justifiée par une phrase de l'article.</p>
+    <table class="figures">
+      <tr><th>Opportunités détectées</th><td>{{ report.opportunities|length }}</td></tr>
+      <tr><th>Repères « opportunité » modifiés à la main (conservés)</th><td>{{ report.protected_opportunities }}</td></tr>
+      <tr><th>Franchisés candidats, confiance haute</th><td>{{ by_conf['haute'] }}</td></tr>
+      <tr><th>Franchisés candidats, confiance moyenne</th><td>{{ by_conf['moyenne'] }}</td></tr>
+      <tr><th>Franchisés candidats, confiance basse</th><td>{{ by_conf['basse'] }}</td></tr>
+      <tr><th>Phrases déclencheuses sans nom (pas de fiche)</th><td>{{ report.unnamed|length }}</td></tr>
+      <tr><th>Fiches validées ou modifiées à la main (conservées)</th><td>{{ report.protected_franchisees }}</td></tr>
+    </table>
+
+    {% if report.opportunities %}
+      <h2>Opportunités</h2>
+      <ul class="evidence">
+        {% for finding in report.opportunities %}
+          <li><a href="{{ finding.article.url }}" target="_blank" rel="noopener noreferrer">{{ finding.article.title }}</a>
+            — {{ finding.article.source_name }}<br>
+            <q>{{ finding.match.sentence }}</q><br>
+            <small>Termes : {{ finding.match.terms|join(", ") }}</small></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if report.candidates %}
+      <h2>Franchisés candidats</h2>
+      <ul class="evidence">
+        {% for finding in report.candidates %}
+          {% set c = finding.candidate %}
+          <li><strong>{{ c.name }}</strong> — {{ c.brands|join(", ") or "enseigne inconnue" }}
+            — {{ c.location or "lieu inconnu" }}
+            — {% if c.store_count is not none %}{{ c.store_count }} point(s) de vente{% else %}nombre inconnu{% endif %}
+            (confiance {{ c.confidence }})<br>
+            <q>{{ c.evidence }}</q><br>
+            <small>Source : <a href="{{ finding.article.url }}" target="_blank" rel="noopener noreferrer">{{ finding.article.source_name }}</a></small></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+  <p><a href="{{ url_for('collect.index', mois=month) }}">Retour à la collecte</a> ·
+     <a href="{{ url_for('index') }}">Accueil</a></p>
+{% endblock %}

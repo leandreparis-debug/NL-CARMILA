@@ -6,7 +6,7 @@ Accès par `sqlite3` (bibliothèque standard, sans ORM), via les fonctions de `n
 ## Règles
 
 1. **Aucun lien inventé.** Un article ou un franchisé n'existe en base qu'avec l'URL réelle de l'article d'origine. Toute URL stockée commence par `http://` ou `https://`. C'est contrôlé deux fois : à la construction des dataclasses (`ValueError`) et par une contrainte `CHECK` en SQL.
-2. **La Une est calculée à la volée.** Nombre d'ouvertures, d'enseignes rencontrées et de franchisés **validés** : `newsletters.front_page_figures()` les calcule par requête. Ces chiffres ne sont jamais stockés.
+2. **La Une est calculée à la volée.** Nombre d'ouvertures, d'enseignes rencontrées et de franchisés **validés** (non écartés) : `newsletters.front_page_figures()` les calcule par requête. Ces chiffres ne sont jamais stockés.
 3. **Photos stockées par nom relatif.** `opening_photos.file_name` est relatif au dossier `<données>/photos` (ex. `2026-10/ouverture-lyon.jpg`). Jamais de chemin absolu, de `\`, de `:` ni de `..` : contrôle en Python et en `CHECK` SQL.
 4. **Dates en ISO 8601 (texte).** Date-heure en UTC avec fuseau (`2026-10-09T12:00:00+00:00`), date simple `AAAA-MM-JJ`. Le mois d'une newsletter est au format `AAAA-MM`.
 5. **Requêtes toujours paramétrées.** Aucune donnée n'est concaténée dans le SQL. Seuls les noms de tables et de colonnes fixés dans le code le sont.
@@ -63,6 +63,9 @@ newsletters ─┬─< articles >──── brands
 | `selected` | INTEGER | 1 (défaut) = retenu pour la newsletter |
 | `position` | INTEGER | ordre dans la rubrique |
 | `collected_at` | TEXT | date de collecte |
+| `opportunity_source` | TEXT | origine du repère `is_opportunity` : NULL (jamais évalué), `auto` (détection), `manual` (modifié à la main : la détection n'y touche plus) — migration 0004 |
+| `opportunity_evidence` | TEXT | phrase de l'article qui justifie le repère (texte brut, ≤ 400 caractères) |
+| `opportunity_terms` | TEXT | termes déclencheurs (liste JSON) |
 | `body_text` | TEXT | texte brut de l'article (paragraphes du corps), tronqué à 20 000 caractères, nullable (migration 0002). Sert à la détection des franchisés et des opportunités ; **jamais affiché tel quel** dans la newsletter |
 
 ### `franchisees`: franchisés identifiés (rubrique 5)
@@ -78,6 +81,11 @@ newsletters ─┬─< articles >──── brands
 | `article_id` | INTEGER | → `articles`, nullable, `ON DELETE SET NULL` |
 | `validated` | INTEGER | 0 (défaut) = détecté, 1 = validé par l'utilisateur |
 | `position` | INTEGER | ordre d'affichage |
+| `confidence` | TEXT | `haute`, `moyenne`, `basse` (fiche créée par la détection) ; NULL = fiche saisie à la main — migration 0004 |
+| `evidence` | TEXT | phrase de l'article qui justifie la fiche (≤ 400 caractères) |
+| `trigger_terms` | TEXT | termes déclencheurs (liste JSON) |
+| `edited` | INTEGER | 1 = modifiée à la main (la détection n'y touche plus) |
+| `dismissed` | INTEGER | 1 = suggestion écartée par l'utilisateur (jamais recréée, exclue des listes et de la Une) |
 
 ### `openings` et `opening_photos`: ouvertures du mois (rubrique 3)
 `openings` : `id`, `newsletter_id` (CASCADE), `brand_name` (obligatoire), `location` (centre ou ville, obligatoire), `opening_date` (nullable), `description` (nullable), `position`.
@@ -105,8 +113,8 @@ Index : clés étrangères, `(newsletter_id, rubric, position)` sur `articles`, 
 |---|---|
 | `newsletters` | `get_or_create`, `get`, `get_by_id`, `list_all`, `set_status`, `set_development_plans_url`, `delete`, `front_page_figures` |
 | `brands` | `sync_from_yaml`, `list_all`, `get`, `get_by_name`, `get_by_slug` |
-| `articles` | `add` (renvoie `None` si l'URL existe déjà ce mois-ci), `get`, `list_for_rubric`, `update`, `set_selected`, `reorder`, `delete` |
-| `franchisees` | `add`, `get`, `list_for_newsletter`, `update`, `set_validated`, `reorder`, `delete` |
+| `articles` | `add` (renvoie `None` si l'URL existe déjà ce mois-ci), `get`, `list_for_rubric`, `list_for_newsletter`, `update`, `set_selected`, `set_opportunity` (à la main), `apply_auto_opportunity` (détection), `reorder`, `delete` |
+| `franchisees` | `add`, `get`, `list_for_newsletter`, `update` (marque la fiche `edited`), `set_validated`, `set_dismissed`, `apply_auto_update` et `delete_stale_suggestions` (détection), `reorder`, `delete` |
 | `openings` | `add`, `get`, `list_for_newsletter`, `update`, `reorder`, `delete`, `add_photo`, `get_photo`, `list_photos`, `reorder_photos`, `delete_photo` (supprime aussi le fichier) |
 | `meetings` | `add`, `get`, `list_for_newsletter`, `update`, `reorder`, `delete` |
 | `collection_runs` | `start`, `finish`, `get`, `last_for_newsletter`, `list_running` |
@@ -120,6 +128,7 @@ Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion
 | `0001_initial.sql` | Schéma initial (étape 3) |
 | `0002_article_body.sql` | Colonne `articles.body_text` |
 | `0003_brand_case_sensitive.sql` | Colonne `brands.case_sensitive` |
+| `0004_detection.sql` | Preuves et protections de la détection (`articles.opportunity_*`, `franchisees.confidence`, `evidence`, `trigger_terms`, `edited`, `dismissed`) |
 
 ## Ajouter une migration
 

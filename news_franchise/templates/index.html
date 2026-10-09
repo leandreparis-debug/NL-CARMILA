@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>News Franchise</h1>
+  <p class="month">Newsletter de <strong>{{ current_month }}</strong></p>
+  <section class="actions" aria-label="Fonctions">
+    {% for feature in features %}
+      <button type="button" disabled title="Disponible prochainement">{{ feature }}</button>
+    {% endfor %}
+  </section>
+  <p class="hint">Ces fonctions seront disponibles dans les prochaines versions.</p>
+{% endblock %}

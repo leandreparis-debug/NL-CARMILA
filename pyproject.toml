@@ -1,0 +1,9 @@
+[project]
+name = "news-franchise"
+version = "0.1.0"
+description = "Préparation de la newsletter interne mensuelle de Carmila Franchise."
+requires-python = ">=3.14"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"

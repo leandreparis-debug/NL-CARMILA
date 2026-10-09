@@ -10,6 +10,7 @@ import webbrowser
 
 from news_franchise import __version__, create_app
 from news_franchise.config import ConfigError, load_settings
+from news_franchise.db import DatabaseError
 from news_franchise.logging_setup import configure_logging
 
 logger = logging.getLogger("news_franchise")
@@ -61,7 +62,11 @@ def main() -> int:
         logger.error(port_in_use_message(settings.port))
         return 1
 
-    app = create_app(settings)
+    try:
+        app = create_app(settings)
+    except (ConfigError, DatabaseError) as exc:
+        logger.error("Démarrage impossible : %s", exc)
+        return 2
 
     if settings.open_browser:
         timer = threading.Timer(BROWSER_DELAY_SECONDS, webbrowser.open, args=(url,))

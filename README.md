@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique et outil de diagnostic des sources de veille. La page d'accueil s'affiche, les boutons des futures fonctions sont présents mais désactivés.
+> **État actuel (v0.1.0)** : socle technique, outil de diagnostic des sources de veille et base de données locale. La page d'accueil s'affiche, les boutons des futures fonctions sont présents mais désactivés.
 
 ## Prérequis
 
@@ -69,6 +69,37 @@ La configuration se fait par variables d'environnement, ou plus simplement dans 
 | `NF_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
 
 Une valeur invalide arrête l'application avec un message qui nomme la variable fautive. Le fichier `.env` n'est pas versionné : n'y mettez rien qui doive être partagé. Aucun secret n'est écrit dans le code.
+
+## Données
+
+### Base de données
+
+Toutes les données de la newsletter (actualités retenues, franchisés, ouvertures, rencontres, historique des collectes) sont dans une base SQLite locale :
+
+```
+%LOCALAPPDATA%\NewsFranchise\db\news_franchise.sqlite3
+```
+
+Elle est créée, puis mise à jour (migrations), automatiquement au lancement de l'application. Les photos des ouvertures sont dans `photos\` ; la base ne stocke que leur nom. Le schéma et les règles (aucun lien inventé, Une calculée à la volée…) sont décrits dans [`docs/data-model.md`](docs/data-model.md).
+
+### Sauvegarder
+
+1. Fermez l'application (fenêtre noire de `lancer.bat`).
+2. Copiez **tout le dossier** `%LOCALAPPDATA%\NewsFranchise\db\` (et `photos\` pour les photos) vers un emplacement de sauvegarde, par exemple Google Drive.
+
+Copiez le dossier entier, pas seulement le fichier `.sqlite3` : si l'application n'a pas été fermée proprement, les fichiers `-wal` et `-shm` qui l'accompagnent contiennent les dernières modifications. Pour restaurer, remettez le dossier à sa place, application fermée.
+
+### Modifier la liste des enseignes
+
+Le référentiel des enseignes suivies est le fichier **`config\enseignes.yaml`** (nom, secteur, autres écritures du nom). Pour le modifier :
+
+1. ouvrez-le avec le Bloc-notes et respectez l'indentation (2 espaces, pas de tabulation) ;
+2. ajoutez, corrigez ou retirez une enseigne (champs `name`, `sector`, `aliases`) ;
+3. relancez l'application : la base est synchronisée au démarrage.
+
+Une enseigne retirée du fichier n'est jamais effacée de la base (son historique est conservé) : elle n'est simplement plus suivie. En cas d'erreur dans le fichier (nom manquant, doublon, indentation), l'application ne démarre pas et indique la ligne et l'enseigne fautives.
+
+**À vérifier** : les secteurs ont été saisis à titre indicatif. Celui de « Mira Mira » est à compléter.
 
 ## Tester les sources de veille
 
@@ -145,13 +176,22 @@ NewsFranchise/
 ├── .gitattributes          # Fins de ligne (CRLF pour les .bat)
 ├── README.md
 ├── config/
+│   ├── enseignes.yaml      # Référentiel des 15 enseignes suivies
 │   └── sources.example.yaml  # Format documenté de config/sources.yaml
+├── docs/
+│   └── data-model.md       # Modèle de données et procédure de migration
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
 │   ├── __main__.py         # Point d'entrée : python -m news_franchise
 │   ├── config.py           # Settings et load_settings()
 │   ├── logging_setup.py    # Journal rotatif + console
 │   ├── dates.py            # Noms de mois en français
+│   ├── models.py           # Dataclasses (Newsletter, Article, Franchisee...)
+│   ├── brand_catalog.py    # Lecture et validation de config/enseignes.yaml
+│   ├── db/
+│   │   ├── connection.py   # Connexion SQLite, migrations, intégration Flask
+│   │   └── migrations/     # 0001_initial.sql...
+│   ├── repositories/       # Fonctions d'accès aux données, une par table principale
 │   ├── http_client.py      # Client HTTP poli (reprises, débit, robots.txt)
 │   ├── sources/
 │   │   ├── candidates.py   # Sources candidates et enseignes suivies
@@ -167,6 +207,9 @@ NewsFranchise/
     ├── fixtures/           # Pages HTML et flux RSS enregistrés
     ├── test_config.py
     ├── test_app.py
+    ├── test_db.py
+    ├── test_brands.py
+    ├── test_repositories.py
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

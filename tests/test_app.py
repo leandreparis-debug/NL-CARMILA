@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import date
+from pathlib import Path
 
-from flask import Flask
+import pytest
+from flask import Flask, g
 from flask.testing import FlaskClient
 
 from news_franchise import __version__, create_app
+from news_franchise.brand_catalog import BrandCatalogError
 from news_franchise.config import Settings
 from news_franchise.dates import format_month_fr
+from news_franchise.db.connection import current_version, db_path, get_connection, get_db
+from news_franchise.repositories import brands
 
 
 def test_index(client: FlaskClient) -> None:
@@ -60,3 +66,27 @@ def test_settings_stored_in_app(app: Flask, settings: Settings) -> None:
 def test_format_month_fr() -> None:
     assert format_month_fr(date(2026, 10, 9)) == "Octobre 2026"
     assert format_month_fr(date(2026, 8, 1)) == "Août 2026"
+
+
+def test_app_creates_database_with_brands(app: Flask, settings: Settings) -> None:
+    assert db_path(settings).is_file()
+    with closing(get_connection(settings)) as conn:
+        assert current_version(conn) == 1
+        assert len(brands.list_all(conn, tracked_only=True)) == 15
+
+
+def test_invalid_brands_file_prevents_startup(settings: Settings, tmp_path: Path) -> None:
+    bad = tmp_path / "enseignes.yaml"
+    bad.write_text("brands:\n  - name: A\n  - name: a\n", encoding="utf-8")
+    with pytest.raises(BrandCatalogError, match="ligne 3"):
+        create_app(settings, brands_file=bad)
+
+
+def test_one_connection_per_request_closed_at_teardown(app: Flask) -> None:
+    with app.app_context():
+        conn = get_db()
+        assert get_db() is conn
+        assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+        assert "db" in g
+    with pytest.raises(Exception, match="closed"):
+        conn.execute("SELECT 1")

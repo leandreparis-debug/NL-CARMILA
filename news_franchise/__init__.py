@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
+import logging
+from contextlib import closing
 from datetime import date
+from pathlib import Path
 
 from flask import Flask, jsonify, render_template
 from flask.typing import ResponseReturnValue
 from werkzeug.exceptions import InternalServerError, NotFound
 
+from news_franchise.brand_catalog import BRANDS_FILE
 from news_franchise.config import Settings, load_settings
 from news_franchise.dates import format_month_fr
+from news_franchise.db import connection as db_connection
+from news_franchise.repositories import brands
 
 __version__ = "0.1.0"
 
 __all__ = ["__version__", "create_app"]
+
+logger = logging.getLogger(__name__)
 
 # Fonctions prévues aux étapes suivantes (boutons désactivés pour l'instant).
 UPCOMING_FEATURES = (
@@ -24,18 +32,36 @@ UPCOMING_FEATURES = (
 )
 
 
-def create_app(settings: Settings | None = None) -> Flask:
+def create_app(settings: Settings | None = None, brands_file: Path | None = None) -> Flask:
     """Crée et configure l'application Flask.
 
     Si settings est None, la configuration est chargée depuis l'environnement et .env.
     Les paramètres sont disponibles dans app.config["NF_SETTINGS"].
+
+    Au démarrage : applique les migrations manquantes de la base, puis synchronise le
+    référentiel des enseignes (brands_file, par défaut config/enseignes.yaml). Lève
+    MigrationError ou BrandCatalogError (messages en français) si l'un des deux échoue.
+    Chaque requête dispose ensuite de sa propre connexion (news_franchise.db.connection.get_db).
     """
     if settings is None:
         settings = load_settings()
 
+    version = db_connection.init_db(settings)
+    with closing(db_connection.get_connection(settings)) as conn:
+        sync = brands.sync_from_yaml(conn, brands_file or BRANDS_FILE)
+    logger.info(
+        "Base %s (schéma v%d) ; enseignes ajoutées : %d, mises à jour : %d, plus suivies : %d",
+        db_connection.db_path(settings),
+        version,
+        len(sync.added),
+        len(sync.updated),
+        len(sync.untracked),
+    )
+
     app = Flask(__name__)
     app.config["NF_SETTINGS"] = settings
     app.config["DEBUG"] = settings.debug
+    db_connection.init_app(app)
 
     @app.context_processor
     def inject_globals() -> dict[str, object]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import socket
+import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -14,7 +15,10 @@ from flask.testing import FlaskClient
 
 from news_franchise import create_app
 from news_franchise.config import Settings, load_settings
+from news_franchise.db.connection import get_connection, init_db
 from news_franchise.http_client import Fetcher
+from news_franchise.models import Newsletter
+from news_franchise.repositories import newsletters
 
 
 @pytest.fixture(autouse=True)
@@ -77,3 +81,18 @@ def mock_http() -> Iterator[respx.MockRouter]:
     """Simulation des appels httpx (déclarer les routes avec tests.helpers.serve)."""
     with respx.mock(assert_all_called=False) as router:
         yield router
+
+
+@pytest.fixture
+def conn(settings: Settings) -> Iterator[sqlite3.Connection]:
+    """Connexion à une base migrée, dans le dossier temporaire."""
+    init_db(settings)
+    connection = get_connection(settings)
+    yield connection
+    connection.close()
+
+
+@pytest.fixture
+def newsletter(conn: sqlite3.Connection) -> Newsletter:
+    """Newsletter d'octobre 2026."""
+    return newsletters.get_or_create(conn, "2026-10")

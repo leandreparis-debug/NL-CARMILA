@@ -1,0 +1,60 @@
+# Référentiel des enseignes suivies par Carmila Franchise.
+#
+# Chargé et synchronisé en base à chaque démarrage de l'application :
+# - une enseigne ajoutée ici est créée ;
+# - le secteur et les alias sont mis à jour ;
+# - une enseigne retirée n'est jamais effacée : elle n'est simplement plus suivie.
+#
+# Champs : name (obligatoire, unique), sector (texte), aliases (autres écritures du nom,
+# utilisées plus tard pour repérer l'enseigne dans les articles). Un nom ou un alias ne
+# peut désigner qu'une seule enseigne (la casse, les accents et le type d'apostrophe ne
+# comptent pas pour cette vérification).
+#
+# SECTEURS À VÉRIFIER par l'utilisateur, en particulier « Mira Mira » (à compléter).
+
+brands:
+  - name: Adopt
+    sector: Parfumerie et beauté
+    aliases: ["Adopt'", "Adopt Parfums"]
+  - name: Comptoir de Mathilde
+    sector: Épicerie fine et chocolaterie
+    aliases: ["Le Comptoir de Mathilde"]
+  - name: Leonidas
+    sector: Chocolaterie
+    aliases: []
+  - name: Mira Mira
+    sector: "À compléter"
+    aliases: []
+  - name: Dreams Donuts
+    sector: Restauration et snacking
+    aliases: ["Dream's Donuts", "Dreams Donut"]
+  - name: O'Tacos
+    sector: Restauration rapide
+    aliases: ["OTacos", "O Tacos", "O’Tacos"]
+  - name: Jeff de Bruges
+    sector: Chocolaterie
+    aliases: []
+  - name: Crêpe Touch
+    sector: Restauration et snacking
+    aliases: ["Crepe Touch"]
+  - name: Pokawa
+    sector: Restauration rapide
+    aliases: []
+  - name: G La Dalle
+    sector: Restauration rapide
+    aliases: ["G la Dalle", "GLaDalle"]
+  - name: Easy Cash
+    sector: Achat-vente d'occasion
+    aliases: ["Easycash"]
+  - name: Yogurt Factory
+    sector: Restauration et snacking
+    aliases: []
+  - name: Wycon
+    sector: Cosmétiques
+    aliases: ["Wycon Cosmetics"]
+  - name: Dunkin' Donuts
+    sector: Restauration et snacking
+    aliases: ["Dunkin", "Dunkin’ Donuts", "Dunkin Donuts"]
+  - name: Chopstix
+    sector: Restauration rapide
+    aliases: []

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Ajouter un franchisé — News Franchise{% endblock %}
+{% block content %}
+  <p class="breadcrumb"><a href="{{ url_for('review.index') }}">Newsletters</a> ›
+    <a href="{{ url_for('review.month', month=newsletter.month, tab='franchises') }}">{{ month_label }}</a> › Ajouter un franchisé</p>
+  <h1>Ajouter un franchisé à la main</h1>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <p>Le lien source est obligatoire : c'est l'article qui parle de ce franchisé. L'application vérifie qu'il fonctionne.</p>
+  <form method="post" action="{{ url_for('review.add_franchisee', month=newsletter.month) }}" class="card-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="grid">
+      <div class="field">
+        <label for="nom">Nom (personne ou société)</label>
+        <input type="text" id="nom" name="nom" value="{{ form.nom or '' }}" maxlength="150" required>
+      </div>
+      <div class="field">
+        <label for="enseignes">Enseigne(s)</label>
+        <input type="text" id="enseignes" name="enseignes" value="{{ form.enseignes or '' }}" maxlength="200">
+      </div>
+      <div class="field">
+        <label for="lieu">Ville ou région</label>
+        <input type="text" id="lieu" name="lieu" value="{{ form.lieu or '' }}" maxlength="120">
+      </div>
+      <div class="field">
+        <label for="nombre">Nombre de points de vente</label>
+        <input type="number" id="nombre" name="nombre" min="0" max="100000" value="{{ form.nombre or '' }}">
+        <p class="help">Laissez vide si vous ne le connaissez pas.</p>
+      </div>
+      <div class="field field-wide">
+        <label for="lien_source">Lien de l'article source (obligatoire)</label>
+        <input type="url" id="lien_source" name="lien_source" value="{{ form.lien_source or '' }}" required placeholder="https://…" maxlength="2000">
+      </div>
+      <div class="field">
+        <label for="source">Nom de la source (facultatif)</label>
+        <input type="text" id="source" name="source" value="{{ form.source or '' }}" maxlength="120">
+      </div>
+      <label class="check"><input type="checkbox" name="valider" {% if form.valider %}checked{% endif %}> Valider ce franchisé</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Vérifier le lien et enregistrer</button>
+  </form>
+{% endblock %}

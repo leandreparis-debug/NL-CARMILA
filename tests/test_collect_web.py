@@ -10,7 +10,6 @@ import respx
 from flask import Flask
 from flask.testing import FlaskClient
 
-from news_franchise import create_app
 from news_franchise.collect.runner import Progress
 from news_franchise.collect.views import CollectionJob, _registry
 from news_franchise.config import Settings
@@ -18,12 +17,13 @@ from news_franchise.db.connection import get_connection
 from news_franchise.http_client import Fetcher
 from news_franchise.repositories import collection_runs, newsletters
 from news_franchise.tools import collect as collect_tool
+from tests.helpers import post_form, web_app
 from tests.test_collect_runner import FEED_A, NOW, _site_routes, write_sources
 
 
 @pytest.fixture
 def collect_app(settings: Settings, tmp_path: Path) -> Flask:
-    app = create_app(settings)
+    app = web_app(settings)
     app.config.update(
         NF_CLOCK=lambda: NOW,
         NF_FETCHER_FACTORY=lambda: Fetcher(sleep=lambda _: None),
@@ -53,7 +53,7 @@ def test_missing_sources_file_is_explained(collect_app: Flask, tmp_path: Path) -
     html = collect_app.test_client().get("/collecte/").get_data(as_text=True)
     assert "sources.proposed.yaml" in html
     assert "disabled" in html
-    response = collect_app.test_client().post("/collecte/", data={"mois": "2026-10"})
+    response = post_form(collect_app.test_client(), "/collecte/", {"mois": "2026-10"})
     assert response.status_code == 400
 
 
@@ -62,7 +62,7 @@ def test_collection_in_background_then_summary(
 ) -> None:
     _site_routes(mock_http)
 
-    response = web.post("/collecte/", data={"mois": "2026-10"})
+    response = post_form(web, "/collecte/", {"mois": "2026-10"})
     assert response.status_code == 302 and response.headers["Location"].endswith("/collecte/suivi")
     job = _registry(collect_app).job
     assert job is not None and job.thread is not None
@@ -88,7 +88,7 @@ def test_status_page_refreshes_while_running(collect_app: Flask, web: FlaskClien
 
 def test_second_collection_is_refused(collect_app: Flask, web: FlaskClient) -> None:
     _registry(collect_app).job = CollectionJob(month="2026-10")  # en cours
-    response = web.post("/collecte/", data={"mois": "2026-09"})
+    response = post_form(web, "/collecte/", {"mois": "2026-09"})
     assert response.status_code == 409
     assert "déjà en cours" in response.get_data(as_text=True)
 
@@ -102,27 +102,27 @@ def test_collection_running_in_another_process_is_refused(
         collection_runs.start(conn, newsletter.id, NOW)  # type: ignore[arg-type]
     finally:
         conn.close()
-    response = web.post("/collecte/", data={"mois": "2026-10"})
+    response = post_form(web, "/collecte/", {"mois": "2026-10"})
     assert response.status_code == 409
     assert "déjà en cours" in response.get_data(as_text=True)
     assert _registry(collect_app).job is None
 
 
 def test_invalid_month_is_rejected(web: FlaskClient) -> None:
-    response = web.post("/collecte/", data={"mois": "octobre"})
+    response = post_form(web, "/collecte/", {"mois": "octobre"})
     assert response.status_code == 400
     assert "AAAA-MM" in response.get_data(as_text=True)
 
 
 def test_cross_site_post_is_forbidden(collect_app: Flask, web: FlaskClient) -> None:
-    response = web.post(
-        "/collecte/", data={"mois": "2026-10"}, headers={"Origin": "https://malveillant.example"}
+    response = post_form(
+        web, "/collecte/", {"mois": "2026-10"}, headers={"Origin": "https://malveillant.example"}
     )
     assert response.status_code == 403
     assert "Action refusée" in response.get_data(as_text=True)
     assert _registry(collect_app).job is None
-    ok = web.post(
-        "/collecte/", data={"mois": "pas-un-mois"}, headers={"Origin": "http://localhost"}
+    ok = post_form(
+        web, "/collecte/", {"mois": "pas-un-mois"}, headers={"Origin": "http://127.0.0.1:5000"}
     )
     assert ok.status_code == 400  # même origine : la requête est traitée
 

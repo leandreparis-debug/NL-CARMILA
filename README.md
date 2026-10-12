@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille et détection des franchisés et opportunités. Les boutons Relire, Contenu interne et Exporter sont encore désactivés.
+> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, interface de relecture. Les boutons Contenu interne et Exporter sont encore désactivés.
 
 ## Prérequis
 
@@ -153,6 +153,55 @@ Les listes de mots-clés sont dans **`config\regles_veille.yaml`** (commenté) :
 
 Pour une enseigne dont le nom est aussi un mot courant, mettez `case_sensitive: true` dans `config\enseignes.yaml` : la majuscule initiale sera exigée (c'est le cas d'Adopt, pour ne pas confondre avec « adopter »). Les changements s'appliquent aux collectes suivantes ; les articles déjà collectés ne sont pas reclassés.
 
+## Relire la newsletter
+
+Une fois la veille collectée, la relecture permet en quelques minutes de choisir ce qui ira dans la newsletter, de corriger, d'ordonner et de valider les franchisés.
+
+### Pas à pas
+
+1. **Accueil → Relire.** La page « Newsletters » liste les mois, du plus récent au plus ancien, avec leur statut (Brouillon, Relue, Exportée) et le nombre d'éléments retenus. Cliquez sur **Relire** devant un mois, ou choisissez un mois puis **Ouvrir ou créer ce mois**.
+2. **Trois onglets** :
+   - *Rubrique 1 — Marché de la franchise* ;
+   - *Rubrique 2 — Nos enseignes* ;
+   - *Rubrique 5 — Franchisés identifiés*.
+
+   Chaque onglet affiche un compteur « retenus / limite ». Il passe **en orange** quand la limite est dépassée : c'est un simple avertissement, rien n'est bloqué. Un rappel indique que la version imprimée doit tenir en 4 pages A4.
+3. **Filtres** : *Tout*, *Retenus*, *Non retenus*, *Opportunités* (pour les franchisés : *Tout*, *Validés*, *À valider*).
+4. **Pour chaque article** (une carte) :
+   - **Retenir / Ne plus retenir** : garde l'article dans la newsletter ou l'en retire (il reste visible, en grisé) ;
+   - **↑ Monter / ↓ Descendre** : change sa place dans la rubrique ;
+   - **Supprimer…** : demande une confirmation, puis efface l'article. Pour l'écarter simplement, préférez « Ne plus retenir » ;
+   - **Ouvrir l'article ↗** : ouvre l'article d'origine dans un nouvel onglet ;
+   - les champs **Titre, Enseigne** (les 15 enseignes ou « Autre… » avec un nom libre), **Secteur, Date, Source** et **Premières lignes** se corrigent puis s'enregistrent avec **Enregistrer cet article**. Les premières lignes peuvent être coupées ou corrigées, **pas réécrites** : elles doivent rester fidèles à l'article ;
+   - la case **Opportunité** marque les articles où l'enseigne cherche des emplacements. Si le repère a été posé automatiquement, la phrase qui l'a déclenché est affichée. Une fois modifié à la main, il n'est plus jamais changé par la détection ;
+   - **le lien de l'article n'est pas modifiable** : on peut retirer un article, pas changer son lien.
+5. **Ne retenir que les N premiers** (N = limite de la rubrique) : retient les N premiers articles, dans l'ordre affiché, et retire les suivants. Pratique après avoir mis les meilleurs en haut.
+6. **+ Ajouter un article à la main** : collez le lien d'un article trouvé vous-même, puis **Vérifier le lien**. L'application vérifie qu'il fonctionne, lit son titre et ses premières lignes, puis vous complétez le reste avant d'enregistrer. Un lien qui ne répond pas est refusé avec un message.
+7. **Onglet Franchisés** : chaque fiche (nom, enseigne(s), ville ou région, nombre de points de vente, source, niveau de confiance) montre la phrase de l'article qui l'a fait détecter.
+   - **Valider** la garde dans la newsletter.
+   - Toute correction (**Enregistrer ce franchisé**) est définitive : la détection n'y touchera plus.
+   - **Supprimer…** écarte une suggestion, qui ne sera plus reproposée.
+   - **+ Ajouter un franchisé à la main** exige le lien de l'article source, qui est vérifié.
+8. **Marquer comme relue** (en haut à droite) passe la newsletter au statut « Relue ». Des avertissements s'affichent si une rubrique dépasse sa limite ou si aucun franchisé n'est validé, mais rien n'est bloqué. **Repasser en brouillon** permet de revenir en arrière.
+
+Après chaque action, un message confirme ce qui a été fait (ou explique pourquoi c'est refusé) et la page revient sur l'élément concerné. Tout fonctionne sans JavaScript et au clavier (touche Tab ; un lien « Aller au contenu » apparaît en premier).
+
+### Limites par rubrique
+
+Les limites sont dans **`config\limites.yaml`** (commenté) : rubrique 1 = 6, rubrique 2 = 8, franchisés = 5, ouvertures = 4, pages = 4 au départ. Modifiez le fichier puis rechargez la page : inutile de relancer l'application. Si le fichier est absent, ces valeurs s'appliquent ; s'il est invalide, un message l'indique en haut de la page.
+
+### Essayer sans collecte réelle : la démonstration
+
+```bat
+.venv\Scripts\python.exe -m news_franchise.tools.demo
+```
+
+Crée la newsletter fictive de **janvier 2000**, avec des articles marqués « [DÉMO] » dont les liens mènent à `example.com`. Aucun autre mois n'est touché. `--reset` la recrée à l'identique.
+
+### Sécurité
+
+Formulaires protégés par jeton, adresse contrôlée, textes des sites toujours affichés comme du texte, liens non modifiables : voir [`docs/securite.md`](docs/securite.md).
+
 ## Franchisés et opportunités
 
 Après chaque collecte, l'application propose automatiquement :
@@ -258,10 +307,12 @@ NewsFranchise/
 │   ├── regles_veille.yaml  # Mots-clés de tri de la veille (rubrique 1, exclusions)
 │   ├── regles_detection.yaml # Règles « opportunité » et franchisés
 │   ├── lieux_france.yaml   # Régions, départements, grandes villes
+│   ├── limites.yaml        # Limites éditoriales par rubrique
 │   └── sources.example.yaml  # Format documenté de config/sources.yaml
 ├── docs/
 │   ├── data-model.md       # Modèle de données et procédure de migration
-│   └── detection.md        # Détection des opportunités et des franchisés
+│   ├── detection.md        # Détection des opportunités et des franchisés
+│   └── securite.md         # CSRF, contrôle du Host, échappement, liens non modifiables
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
 │   ├── __main__.py         # Point d'entrée : python -m news_franchise
@@ -288,11 +339,14 @@ NewsFranchise/
 │   │   ├── runner.py       # Orchestrateur run_collection()
 │   │   └── views.py        # Pages web /collecte
 │   ├── detect/             # Détection : règles, phrases, lieux, opportunités, franchisés
+│   ├── review/             # Relecture : limites, actions (service.py), pages (views.py)
+│   ├── security.py         # Clé secrète, jeton CSRF, contrôle du Host et de l'origine
 │   ├── tools/
 │   │   ├── diagnose_sources.py  # Outil de diagnostic des sources
 │   │   ├── collect.py      # Collecte en ligne de commande
 │   │   ├── detect.py       # Détection en ligne de commande
-│   │   └── evaluate_detection.py  # Rapport de fiabilité de la détection
+│   │   ├── evaluate_detection.py  # Rapport de fiabilité de la détection
+│   │   └── demo.py         # Newsletter de démonstration (janvier 2000)
 │   ├── templates/          # Gabarits Jinja2 (base, accueil, erreur)
 │   └── static/             # Feuille de style
 └── tests/
@@ -308,6 +362,7 @@ NewsFranchise/
     ├── test_collect_runner.py
     ├── test_collect_web.py
     ├── test_detection.py   # dont les cas étiquetés de fixtures/detection_cases.yaml
+    ├── test_review.py      # Interface de relecture et sécurité
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

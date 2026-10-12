@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Relecture {{ month_label }} — News Franchise{% endblock %}
+{% block content %}
+  {% set counted_label = "retenus" %}
+  {% include "review/_header.html" %}
+
+  <div class="toolbar">
+    <a class="btn" href="{{ url_for('review.add_article', month=newsletter.month, rubrique=rubric) }}">+ Ajouter un article à la main</a>
+    {% if total > limit %}
+      <form method="post" action="{{ url_for('review.keep_first', month=newsletter.month, tab=tab) }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="filtre" value="{{ filtre }}">
+        <button type="submit" class="btn">Ne retenir que les {{ limit }} premiers</button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if not items %}
+    <p class="muted">Aucun article {% if filtre != "tous" %}pour ce filtre{% else %}dans cette rubrique{% endif %}.</p>
+  {% endif %}
+
+  {% for a in items %}
+    {% set p = "a" ~ a.id %}
+    <article class="card{% if not a.selected %} card-off{% endif %}" id="article-{{ a.id }}">
+      <div class="card-head">
+        <span class="card-pos" title="Position">{{ positions[a.id] + 1 }}</span>
+        <h2 class="card-title">{{ a.title }}</h2>
+        <span class="badge {% if a.selected %}badge-on{% else %}badge-off{% endif %}">{% if a.selected %}Retenu{% else %}Non retenu{% endif %}</span>
+        {% if a.is_opportunity %}<span class="badge badge-opp">Opportunité</span>{% endif %}
+      </div>
+
+      <div class="card-actions">
+        <form method="post" action="{{ url_for('review.toggle_article', month=newsletter.month, article_id=a.id) }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="filtre" value="{{ filtre }}">
+          {% if a.selected %}
+            <button type="submit" name="valeur" value="0" class="btn btn-small">Ne plus retenir</button>
+          {% else %}
+            <button type="submit" name="valeur" value="1" class="btn btn-small btn-primary">Retenir</button>
+          {% endif %}
+        </form>
+        {% with action=url_for('review.move_article', month=newsletter.month, article_id=a.id), position=positions[a.id] %}
+          {% include "review/_move.html" %}
+        {% endwith %}
+        <a class="btn btn-small btn-danger" href="{{ url_for('review.delete_article', month=newsletter.month, article_id=a.id) }}">Supprimer…</a>
+        <a class="article-link" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l'article ↗<span class="sr-only"> (nouvel onglet)</span></a>
+      </div>
+
+      <form method="post" action="{{ url_for('review.save_article', month=newsletter.month, article_id=a.id) }}" class="card-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="filtre" value="{{ filtre }}">
+        <div class="row">
+          <label class="check"><input type="checkbox" name="retenir" {% if a.selected %}checked{% endif %}> Retenir</label>
+          <label class="check"><input type="checkbox" name="opportunite" {% if a.is_opportunity %}checked{% endif %}>
+            Opportunité (l'enseigne cherche des emplacements)</label>
+        </div>
+        {% if a.opportunity_source == "auto" and a.opportunity_evidence %}
+          <p class="evidence">Repère détecté automatiquement d'après la phrase : <q>{{ a.opportunity_evidence }}</q>
+            {% if a.opportunity_terms %}<small>(termes : {{ a.opportunity_terms|join(", ") }})</small>{% endif %}</p>
+        {% elif a.opportunity_source == "manual" %}
+          <p class="evidence">Repère « opportunité » réglé à la main : la détection automatique ne le modifiera plus.</p>
+        {% endif %}
+
+        <div class="grid">
+          <div class="field field-wide">
+            <label for="{{ p }}-titre">Titre</label>
+            <input type="text" id="{{ p }}-titre" name="titre" value="{{ a.title }}" maxlength="300" required>
+          </div>
+          <div class="field">
+            <label for="{{ p }}-enseigne">Enseigne</label>
+            <select id="{{ p }}-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-autre-field">
+              <option value="" {% if not a.brand_id and not a.brand_label %}selected{% endif %}>— Aucune —</option>
+              {% for b in brand_list %}
+                <option value="{{ b.id }}" {% if a.brand_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+              {% endfor %}
+              <option value="{{ other_brand }}" {% if a.brand_label %}selected{% endif %}>Autre…</option>
+            </select>
+          </div>
+          <div class="field" id="{{ p }}-autre-field">
+            <label for="{{ p }}-autre">Autre enseigne</label>
+            <input type="text" id="{{ p }}-autre" name="enseigne_autre" value="{{ a.brand_label or '' }}" maxlength="100">
+          </div>
+          <div class="field">
+            <label for="{{ p }}-secteur">Secteur</label>
+            <input type="text" id="{{ p }}-secteur" name="secteur" value="{{ a.sector or '' }}" maxlength="80">
+          </div>
+          <div class="field">
+            <label for="{{ p }}-date">Date</label>
+            <input type="date" id="{{ p }}-date" name="date" value="{{ date_value(a) }}">
+          </div>
+          <div class="field">
+            <label for="{{ p }}-source">Source</label>
+            <input type="text" id="{{ p }}-source" name="source" value="{{ a.source_name }}" maxlength="120" required>
+          </div>
+          <div class="field field-wide">
+            <label for="{{ p }}-extrait">Premières lignes</label>
+            <textarea id="{{ p }}-extrait" name="extrait" rows="4" maxlength="1000" aria-describedby="{{ p }}-aide">{{ a.excerpt or '' }}</textarea>
+            <p class="help" id="{{ p }}-aide">Vous pouvez couper ce texte ou corriger une faute, mais pas le réécrire :
+              il doit rester fidèle à ce que dit l'article.</p>
+          </div>
+          <div class="field field-wide">
+            <span class="label">Lien de l'article (non modifiable)</span>
+            <a class="url" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.url }}</a>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Enregistrer cet article</button>
+      </form>
+    </article>
+  {% endfor %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='review.js') }}" defer></script>{% endblock %}

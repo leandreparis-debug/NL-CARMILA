@@ -1,0 +1,25 @@
+# Limites éditoriales de la newsletter (nombre maximal conseillé par rubrique).
+#
+# La version imprimée doit tenir en 4 pages A4 : ces limites servent de repère pendant la
+# relecture. Une rubrique qui dépasse sa limite est signalée en orange, mais rien n'est
+# bloqué. Les valeurs sont relues à chaque affichage : modifiez ce fichier, enregistrez,
+# puis rechargez la page (inutile de relancer l'application).
+#
+# Chaque valeur est un nombre entier entre 1 et 100. Si ce fichier est absent, les valeurs
+# ci-dessous sont utilisées ; s'il est invalide, un message l'indique et les mêmes valeurs
+# par défaut s'appliquent.
+
+# Rubrique 1 : Marché de la franchise (articles retenus).
+rubrique_1: 6
+
+# Rubrique 2 : Nos enseignes (articles retenus).
+rubrique_2: 8
+
+# Rubrique 5 : Franchisés identifiés (fiches validées).
+franchises: 5
+
+# Rubrique 3 : Ouvertures du mois (utilisée à l'étape 7).
+ouvertures: 4
+
+# Nombre maximal de pages A4 de la version imprimée (rappel affiché pendant la relecture).
+pages_max: 4

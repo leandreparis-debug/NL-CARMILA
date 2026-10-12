@@ -22,6 +22,7 @@ from news_franchise.db.connection import (
     list_migrations,
 )
 from news_franchise.repositories import brands
+from tests.helpers import web_app
 
 
 def test_index(client: FlaskClient) -> None:
@@ -50,7 +51,7 @@ def test_404_page_in_french(client: FlaskClient) -> None:
 
 
 def test_500_page_hides_traceback(settings: Settings) -> None:
-    app: Flask = create_app(settings)
+    app: Flask = web_app(settings)
 
     @app.get("/boom")
     def boom() -> str:

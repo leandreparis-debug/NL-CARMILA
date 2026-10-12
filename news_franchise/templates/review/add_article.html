@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Ajouter un article — News Franchise{% endblock %}
+{% block content %}
+  <p class="breadcrumb"><a href="{{ url_for('review.index') }}">Newsletters</a> ›
+    <a href="{{ url_for('review.month', month=newsletter.month, tab='rubrique-' ~ (form.rubrique or '1')) }}">{{ month_label }}</a> › Ajouter un article</p>
+  <h1>Ajouter un article à la main</h1>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+
+  {% if step == 1 %}
+    <p>Collez le lien de l'article. L'application vérifie qu'il fonctionne et lit son titre et
+      ses premières lignes ; vous pourrez ensuite les corriger.</p>
+    <form method="post" action="{{ url_for('review.check_article', month=newsletter.month) }}" class="card-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field field-wide">
+        <label for="lien">Lien de l'article (obligatoire)</label>
+        <input type="url" id="lien" name="lien" value="{{ form.lien or '' }}" required placeholder="https://…" maxlength="2000">
+      </div>
+      <fieldset class="field">
+        <legend>Rubrique</legend>
+        <label class="check"><input type="radio" name="rubrique" value="1" {% if form.rubrique != "2" %}checked{% endif %}> Rubrique 1 — Marché de la franchise</label>
+        <label class="check"><input type="radio" name="rubrique" value="2" {% if form.rubrique == "2" %}checked{% endif %}> Rubrique 2 — Nos enseignes</label>
+      </fieldset>
+      <button type="submit" class="btn btn-primary">Vérifier le lien</button>
+    </form>
+  {% else %}
+    <p>Le lien fonctionne. Vérifiez et complétez les informations, puis enregistrez.</p>
+    <form method="post" action="{{ url_for('review.save_new_article', month=newsletter.month) }}" class="card-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="lien" value="{{ form.lien }}">
+      <input type="hidden" name="rubrique" value="{{ form.rubrique }}">
+      <p>Lien : <a href="{{ form.lien }}" target="_blank" rel="noopener noreferrer">{{ form.lien }}</a>
+        — {% if form.rubrique == "2" %}Rubrique 2 — Nos enseignes{% else %}Rubrique 1 — Marché de la franchise{% endif %}</p>
+      <div class="grid">
+        <div class="field field-wide">
+          <label for="titre">Titre</label>
+          <input type="text" id="titre" name="titre" value="{{ form.titre or '' }}" maxlength="300" required>
+        </div>
+        <div class="field">
+          <label for="enseigne">Enseigne</label>
+          <select id="enseigne" name="enseigne" class="brand-select" data-other="autre-field">
+            <option value="">— Aucune —</option>
+            {% for b in brand_list %}
+              <option value="{{ b.id }}" {% if form.enseigne == b.id|string %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+            <option value="{{ other_brand }}" {% if form.enseigne == other_brand %}selected{% endif %}>Autre…</option>
+          </select>
+        </div>
+        <div class="field" id="autre-field">
+          <label for="autre">Autre enseigne</label>
+          <input type="text" id="autre" name="enseigne_autre" value="{{ form.enseigne_autre or '' }}" maxlength="100">
+        </div>
+        <div class="field">
+          <label for="secteur">Secteur</label>
+          <input type="text" id="secteur" name="secteur" value="{{ form.secteur or '' }}" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" value="{{ form.date or '' }}">
+        </div>
+        <div class="field">
+          <label for="source">Source</label>
+          <input type="text" id="source" name="source" value="{{ form.source or '' }}" maxlength="120" required>
+        </div>
+        <div class="field field-wide">
+          <label for="extrait">Premières lignes</label>
+          <textarea id="extrait" name="extrait" rows="4" maxlength="1000" aria-describedby="extrait-aide">{{ form.extrait or '' }}</textarea>
+          <p class="help" id="extrait-aide">Texte repris de l'article : vous pouvez le couper ou corriger une faute, mais pas le réécrire.</p>
+        </div>
+        <label class="check"><input type="checkbox" name="opportunite" {% if form.opportunite %}checked{% endif %}> Opportunité (l'enseigne cherche des emplacements)</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Enregistrer l'article</button>
+      <a class="btn" href="{{ url_for('review.add_article', month=newsletter.month, rubrique=form.rubrique) }}">Changer de lien</a>
+    </form>
+  {% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='review.js') }}" defer></script>{% endblock %}

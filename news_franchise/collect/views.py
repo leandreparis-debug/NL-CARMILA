@@ -82,8 +82,9 @@ def _registry(app: Flask) -> _Registry:
     return app.extensions.setdefault("nf_collect", _Registry())
 
 
-def _clock() -> datetime:
-    """Horloge de l'application (injectable via app.config["NF_CLOCK"])."""
+def app_now() -> datetime:
+    """Date et heure courantes de l'application (horloge injectable via
+    app.config["NF_CLOCK"])."""
     return current_app.config.get("NF_CLOCK", system_clock)()
 
 
@@ -142,7 +143,7 @@ def _check_config() -> str | None:
 
 def _running_elsewhere() -> str | None:
     """Message si une collecte récente est marquée en cours en base (autre fenêtre, commande)."""
-    now = _clock()
+    now = app_now()
     for run in collection_runs.list_running(get_db()):
         if now - run.started_at < STALE_RUN_AFTER:
             return (
@@ -195,11 +196,11 @@ def _last_run_summary(month: str) -> dict[str, Any] | None:
 @bp.get("/")
 def index() -> ResponseReturnValue:
     """Formulaire : choix du mois (par défaut le mois précédent) et lancement."""
-    month = request.args.get("mois") or previous_month(_clock())
+    month = request.args.get("mois") or previous_month(app_now())
     try:
         month = validate_month(month)
     except ValueError:
-        month = previous_month(_clock())
+        month = previous_month(app_now())
     job = _registry(current_app).job
     return render_template(
         "collect/index.html",
@@ -220,7 +221,7 @@ def start() -> ResponseReturnValue:
     try:
         month = validate_month(raw_month)
     except ValueError as exc:
-        month, error = previous_month(_clock()), str(exc)
+        month, error = previous_month(app_now()), str(exc)
     error = error or _check_config() or _running_elsewhere()
     if error is None:
         try:
@@ -276,7 +277,7 @@ def detect() -> ResponseReturnValue:
     try:
         month = validate_month(raw_month)
     except ValueError as exc:
-        return _detection_page(previous_month(_clock()), None, str(exc), 400)
+        return _detection_page(previous_month(app_now()), None, str(exc), 400)
     job = _registry(current_app).job
     busy = _running_elsewhere() or (
         "Une collecte est en cours : relancez la détection quand elle sera terminée."

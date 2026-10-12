@@ -1,0 +1,44 @@
+{# En-tête de la page de relecture : titre, statut, onglets, compteur. #}
+<div class="review-head">
+  <div>
+    <p class="breadcrumb"><a href="{{ url_for('review.index') }}">Newsletters</a> › {{ month_label }}</p>
+    <h1>Relecture : {{ month_label }}
+      <span class="badge status-{{ newsletter.status }}">{{ status_label }}</span></h1>
+  </div>
+  <form method="post" action="{{ url_for('review.set_status', month=newsletter.month) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="onglet" value="{{ tab }}">
+    {% if newsletter.status == "draft" %}
+      <button type="submit" name="statut" value="relue" class="btn btn-primary">Marquer comme relue</button>
+    {% else %}
+      <button type="submit" name="statut" value="brouillon" class="btn">Repasser en brouillon</button>
+    {% endif %}
+  </form>
+</div>
+
+<nav class="tabs" aria-label="Rubriques">
+  {% for key, label, tab_count, tab_limit in tabs %}
+    <a href="{{ url_for('review.month', month=newsletter.month, tab=key) }}"
+       class="tab{% if key == tab %} tab-active{% endif %}"
+       {% if key == tab %}aria-current="page"{% endif %}>
+      {{ label }}
+      <span class="tab-count{% if tab_count > tab_limit %} over{% endif %}">{{ tab_count }}/{{ tab_limit }}</span>
+    </a>
+  {% endfor %}
+</nav>
+
+<div class="counter-bar">
+  <p class="counter{% if count > limit %} counter-over{% endif %}">
+    <strong>{{ count }} {{ counted_label }}</strong> / limite {{ limit }}
+    {% if count > limit %}— limite dépassée : pensez à en retirer.{% endif %}
+  </p>
+  <p class="muted">Rappel : la version imprimée doit tenir en {{ limits.pages_max }} pages A4.</p>
+</div>
+
+<nav class="filters" aria-label="Filtres">
+  {% for key, label in filters.items() %}
+    <a href="{{ url_for('review.month', month=newsletter.month, tab=tab, filtre=key if key != 'tous' else None) }}"
+       class="filter{% if key == filtre %} filter-active{% endif %}"
+       {% if key == filtre %}aria-current="true"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>

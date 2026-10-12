@@ -1,0 +1,9 @@
+{# Boutons Monter / Descendre. Variables : action, filtre, position, total. #}
+<form method="post" action="{{ action }}" class="inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="filtre" value="{{ filtre }}">
+  <button type="submit" name="sens" value="haut" class="btn btn-small" {% if position == 0 %}disabled{% endif %}
+          title="Monter">↑ Monter</button>
+  <button type="submit" name="sens" value="bas" class="btn btn-small" {% if position == total - 1 %}disabled{% endif %}
+          title="Descendre">↓ Descendre</button>
+</form>

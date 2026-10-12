@@ -31,7 +31,7 @@ from news_franchise.models import Article, Brand, Franchisee, Newsletter
 from news_franchise.repositories import articles, brands, franchisees
 from news_franchise.tools import detect as detect_tool
 from news_franchise.tools import evaluate_detection
-from tests.helpers import FIXTURES_DIR
+from tests.helpers import FIXTURES_DIR, post_form, web_app
 
 CASES = yaml.safe_load((FIXTURES_DIR / "detection_cases.yaml").read_text(encoding="utf-8"))["cases"]
 NOW = datetime(2026, 11, 3, 9, 0, tzinfo=UTC)
@@ -355,9 +355,9 @@ def test_migration_0004_keeps_data(settings: Settings, tmp_path: Path) -> None:
             "INSERT INTO franchisees (newsletter_id, name, source_name, source_url, validated)"
             " VALUES (1, 'Jean Dupont', 'Source', 'https://a.example/1', 1)"
         )
-    assert init_db(settings) == 4
+    assert init_db(settings) >= 4
     with closing(get_connection(settings)) as conn:
-        assert current_version(conn) == 4
+        assert current_version(conn) >= 4
         article = articles.get(conn, 1)
         assert article is not None and article.is_opportunity and article.position == 3
         assert article.body_text == "Texte de l'article"
@@ -466,20 +466,18 @@ def test_collection_runs_detection(
 def test_web_detection_button(
     settings: Settings, db: sqlite3.Connection, newsletter: Newsletter, tmp_path: Path
 ) -> None:
-    from news_franchise import create_app
-
     _article(
         db,
         newsletter,
         "https://a.example/o",
         "Pokawa recherche des emplacements en centre commercial",
     )
-    app = create_app(settings)
+    app = web_app(settings)
     app.config["NF_CLOCK"] = lambda: NOW
     client = app.test_client()
     assert "Relancer la détection" in client.get("/collecte/").get_data(as_text=True)
 
-    response = client.post("/collecte/detection", data={"mois": "2026-10"})
+    response = post_form(client, "/collecte/detection", {"mois": "2026-10"})
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert "Opportunités détectées</th><td>1" in html
@@ -488,6 +486,6 @@ def test_web_detection_button(
     bad = tmp_path / "regles.yaml"
     bad.write_text("franchisee: []\n", encoding="utf-8")
     app.config["NF_DETECTION_RULES_FILE"] = bad
-    response = client.post("/collecte/detection", data={"mois": "2026-10"})
+    response = post_form(client, "/collecte/detection", {"mois": "2026-10"})
     assert response.status_code == 400
     assert "regles.yaml" in response.get_data(as_text=True)

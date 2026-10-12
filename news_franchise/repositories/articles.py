@@ -19,7 +19,7 @@ from news_franchise.repositories._common import (
 _COLUMNS = (
     "id, newsletter_id, rubric, brand_id, sector, title, published_at, source_name, url,"
     " excerpt, is_opportunity, selected, position, collected_at, body_text,"
-    " opportunity_source, opportunity_evidence, opportunity_terms"
+    " opportunity_source, opportunity_evidence, opportunity_terms, brand_label"
 )
 _SCOPE = "newsletter_id = ? AND rubric = ?"
 
@@ -45,6 +45,7 @@ def _from_row(row: sqlite3.Row) -> Article:
         opportunity_source=row["opportunity_source"],
         opportunity_evidence=row["opportunity_evidence"],
         opportunity_terms=json.loads(row["opportunity_terms"]),
+        brand_label=row["brand_label"],
     )
 
 
@@ -68,9 +69,8 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
     si collected_at est None, il prend la date courante. ValueError si l'URL n'est pas
     http(s) (contrôle fait à la construction de l'Article).
     """
-    article = dataclasses.replace(
-        article
-    )  # revalide (URL, rubrique...) et évite les effets de bord
+    # Copie : revalide (URL, rubrique...) et évite les effets de bord.
+    article = dataclasses.replace(article)
     with transaction(conn):
         if article.position is None:
             article.position = _common.next_position(
@@ -81,8 +81,8 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
         cursor = conn.execute(
             "INSERT INTO articles (newsletter_id, rubric, brand_id, sector, title, published_at,"
             " source_name, url, excerpt, is_opportunity, selected, position, collected_at,"
-            " body_text)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            " body_text, brand_label)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             " ON CONFLICT (newsletter_id, url) DO NOTHING",
             (
                 article.newsletter_id,
@@ -99,6 +99,7 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
                 article.position,
                 to_iso_datetime(article.collected_at),
                 article.body_text,
+                article.brand_label,
             ),
         )
         if cursor.rowcount == 0:
@@ -138,7 +139,7 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
             " opportunity_source = CASE WHEN is_opportunity <> ? THEN 'manual'"
             " ELSE opportunity_source END,"
             " is_opportunity = ?, selected = ?, position = COALESCE(?, position),"
-            " body_text = ? WHERE id = ?",
+            " body_text = ?, brand_label = ? WHERE id = ?",
             (
                 article.newsletter_id,
                 article.rubric,
@@ -154,6 +155,7 @@ def update(conn: sqlite3.Connection, article: Article) -> Article:
                 int(article.selected),
                 article.position,
                 article.body_text,
+                article.brand_label,
                 article_id,
             ),
         )

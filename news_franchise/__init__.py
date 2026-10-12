@@ -6,7 +6,7 @@ import logging
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, jsonify, render_template
 from flask.typing import ResponseReturnValue
 from werkzeug.exceptions import Forbidden, InternalServerError, NotFound
 
@@ -15,6 +15,8 @@ from news_franchise.collect.views import bp as collect_bp
 from news_franchise.config import Settings, load_settings
 from news_franchise.dates import format_month_fr
 from news_franchise.db import connection as db_connection
+from news_franchise.review.views import bp as review_bp
+from news_franchise.security import init_security
 from news_franchise.version import __version__
 
 __all__ = ["__version__", "create_app"]
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Boutons de la page d'accueil : (libellé, route Flask) ; route None = pas encore disponible.
 FEATURES: tuple[tuple[str, str | None], ...] = (
     ("Collecter la veille", "collect.index"),
-    ("Relire", None),
+    ("Relire", "review.index"),
     ("Contenu interne", None),
     ("Exporter", None),
 )
@@ -50,24 +52,9 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
     app.config["NF_SETTINGS"] = settings
     app.config["DEBUG"] = settings.debug
     db_connection.init_app(app)
+    init_security(app, settings)
     app.register_blueprint(collect_bp)
-
-    @app.before_request
-    def reject_cross_site_posts() -> None:
-        """Refuse les envois de formulaire venant d'un autre site (protection CSRF).
-
-        L'application n'écoute que sur 127.0.0.1, mais une page web malveillante pourrait
-        tenter d'y poster un formulaire : on exige que l'origine soit l'application.
-        """
-        if request.method in ("GET", "HEAD", "OPTIONS"):
-            return
-        expected = request.host_url.rstrip("/")
-        origin = request.headers.get("Origin")
-        referer = request.headers.get("Referer")
-        if origin is not None and origin != expected:
-            abort(403)
-        if origin is None and referer is not None and not referer.startswith(expected + "/"):
-            abort(403)
+    app.register_blueprint(review_bp)
 
     @app.context_processor
     def inject_globals() -> dict[str, object]:

@@ -163,6 +163,7 @@ class Article:
     source_name: str
     url: str
     brand_id: int | None = None
+    brand_label: str | None = None  # enseigne « Autre » saisie à la main (hors brands)
     sector: str | None = None
     published_at: datetime | None = None
     excerpt: str | None = None

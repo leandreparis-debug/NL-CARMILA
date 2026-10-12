@@ -13,12 +13,12 @@ import respx
 from flask import Flask
 from flask.testing import FlaskClient
 
-from news_franchise import create_app
 from news_franchise.config import Settings, load_settings
 from news_franchise.db.connection import get_connection, init_db
 from news_franchise.http_client import Fetcher
 from news_franchise.models import Newsletter
 from news_franchise.repositories import newsletters
+from tests.helpers import web_app
 
 
 @pytest.fixture(autouse=True)
@@ -58,7 +58,7 @@ def settings(data_dir: Path) -> Settings:
 @pytest.fixture
 def app(settings: Settings) -> Flask:
     """Application Flask de test."""
-    return create_app(settings)
+    return web_app(settings)
 
 
 @pytest.fixture

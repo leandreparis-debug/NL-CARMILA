@@ -53,6 +53,7 @@ newsletters ─┬─< articles >──── brands
 | `newsletter_id` | INTEGER | → `newsletters`, CASCADE |
 | `rubric` | INTEGER | 1 (nouvelles franchises) ou 2 (actualités des enseignes) |
 | `brand_id` | INTEGER | → `brands`, nullable |
+| `brand_label` | TEXT | enseigne « Autre » saisie à la relecture (hors des enseignes suivies), ≤ 100 caractères, nullable (migration 0005) |
 | `sector` | TEXT | nullable |
 | `title` | TEXT | obligatoire |
 | `published_at` | TEXT | nullable, ISO 8601 |
@@ -129,6 +130,7 @@ Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion
 | `0002_article_body.sql` | Colonne `articles.body_text` |
 | `0003_brand_case_sensitive.sql` | Colonne `brands.case_sensitive` |
 | `0004_detection.sql` | Preuves et protections de la détection (`articles.opportunity_*`, `franchisees.confidence`, `evidence`, `trigger_terms`, `edited`, `dismissed`) |
+| `0005_article_brand_label.sql` | Colonne `articles.brand_label` (enseigne « Autre ») |
 
 ## Ajouter une migration
 

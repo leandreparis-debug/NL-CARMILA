@@ -3,19 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}News Franchise{% endblock %}</title>
   {% block head %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
   <header class="site-header">
     <a class="brand" href="{{ url_for('index') }}">News Franchise</a>
+    <nav class="top-nav" aria-label="Navigation principale">
+      <a href="{{ url_for('review.index') }}">Newsletters</a>
+      <a href="{{ url_for('collect.index') }}">Collecter la veille</a>
+    </nav>
   </header>
-  <main class="container">
+  <main class="container" id="contenu">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes" role="status" aria-live="polite">
+          {% for category, message in messages %}
+            <p class="flash flash-{{ category }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
     {% block content %}{% endblock %}
   </main>
   <footer class="site-footer">
     News Franchise v{{ app_version }} — application locale de Carmila Franchise
   </footer>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

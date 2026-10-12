@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, interface de relecture. Les boutons Contenu interne et Exporter sont encore désactivés.
+> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, relecture et contenu interne. Le bouton Exporter est encore désactivé.
 
 ## Prérequis
 
@@ -222,6 +222,76 @@ Crée la newsletter fictive de **janvier 2000**, avec des articles marqués « [
 
 Formulaires protégés par jeton, adresse contrôlée, textes des sites toujours affichés comme du texte, liens non modifiables : voir [`docs/securite.md`](docs/securite.md).
 
+## Ajouter le contenu interne
+
+Le contenu interne se saisit dans l'écran du mois, à côté de la veille. Les onglets suivent l'ordre de la newsletter :
+
+**Une** · **1. Marché** · **2. Nos enseignes** · **3. Ouvertures** · **4. Enseignes rencontrées** · **5. Franchisés** · **6. Plans de développement**
+
+Le bouton **Contenu interne** de l'accueil ouvre directement l'onglet « 3. Ouvertures » du mois en préparation, c'est-à-dire le plus récent au statut Brouillon.
+
+### La Une
+
+Elle affiche trois chiffres :
+- le nombre d'**ouvertures** ;
+- le nombre d'**enseignes rencontrées**, chaque enseigne comptée une fois ;
+- le nombre de **franchisés identifiés**, seulement les fiches validées.
+
+Ils sont **calculés automatiquement** à partir des rubriques 3, 4 et 5 : il n'y a rien à saisir. Un lien sous chaque chiffre mène à la rubrique concernée. S'il reste des franchisés à valider, la Une le signale : ils ne sont pas encore comptés.
+
+### 3. Ouvertures (avec photos)
+
+1. **+ Ajouter une ouverture** :
+   - l'enseigne (une des 15, ou « Autre… » avec son nom) ;
+   - le lieu (centre commercial et ville, obligatoire) ;
+   - la date d'ouverture (facultative) ;
+   - une description courte (400 caractères au plus, un compteur l'indique).
+
+   Si la date ne tombe ni dans le mois de la newsletter ni dans le mois précédent, un avertissement s'affiche, sans bloquer.
+2. Sur la fiche de l'ouverture, **Ajouter des photos** : choisissez une ou plusieurs photos (JPEG, PNG ou WebP), puis **Envoyer les photos**.
+   - 3 photos au maximum par ouverture (réglable dans `config\limites.yaml`).
+   - 15 Mo au maximum par envoi. Au-delà, un message invite à envoyer les photos une par une.
+3. Pour chaque photo :
+   - une **légende** facultative ;
+   - **Choisir comme photo principale** : la photo principale, marquée ★, est la première et sera utilisée en priorité dans les exports ;
+   - **Supprimer…**, avec confirmation.
+4. **Modifier**, **⤒ En tête / ↑ / ↓ / ⤓ En fin / Rang** et **Supprimer…** fonctionnent comme pour les articles. Supprimer une ouverture supprime aussi ses photos.
+
+Les photos sont **traitées automatiquement** à l'envoi :
+- redressées selon l'orientation du téléphone ;
+- réduites à 1600 pixels sur le grand côté ;
+- enregistrées en JPEG ;
+- **débarrassées de leurs métadonnées**, dont la position GPS.
+
+Elles sont rangées dans `%LOCALAPPDATA%\NewsFranchise\photos\AAAA-MM\`, sous un nom généré par l'application. Un fichier qui n'est pas une vraie photo (un document renommé en .jpg, par exemple) est refusé.
+
+### 4. Enseignes rencontrées
+
+- **Ajouter une enseigne rencontrée** : l'enseigne (la liste des 15 enseignes est proposée pendant la frappe, mais tout nom est accepté), la date et un commentaire de 200 caractères, tous deux facultatifs.
+- **Ajout rapide** : collez une liste, **une enseigne par ligne**.
+  - Les lignes vides sont ignorées.
+  - Les enseignes déjà présentes ce mois-ci sont ignorées et signalées, sans tenir compte des majuscules ni des accents : « Pokawa » et « pokawa » sont un doublon.
+- **Modifier**, déplacements et **Supprimer…** comme ailleurs.
+
+### 6. Plans de développement
+
+Saisissez **le lien** vers les plans de développement : un seul par newsletter, souvent un document SharePoint ou Google Drive. Ajoutez si vous voulez un **libellé** ; par défaut ce sera « Voir les plans de développement ».
+
+L'application vérifie seulement que l'adresse commence par `http://` ou `https://`. Elle n'appelle jamais le lien, qui demande souvent une connexion. Testez-le vous-même avec **Ouvrir le lien**. **Retirer le lien** l'enlève.
+
+### Avant de marquer la newsletter comme relue
+
+« Marquer comme relue » signale aussi, sans bloquer :
+- l'absence d'ouverture ;
+- l'absence d'enseigne rencontrée ;
+- l'absence de lien vers les plans ;
+- un nombre d'ouvertures supérieur à la limite (4 par défaut).
+
+La démonstration (`python -m news_franchise.tools.demo`) contient maintenant aussi :
+- 2 ouvertures avec des photos générées, marquées « DÉMO » ;
+- 4 enseignes rencontrées ;
+- un lien de plans vers `example.com`.
+
 ## Franchisés et opportunités
 
 Après chaque collecte, l'application propose automatiquement :
@@ -360,6 +430,7 @@ NewsFranchise/
 │   │   └── views.py        # Pages web /collecte
 │   ├── detect/             # Détection : règles, phrases, lieux, opportunités, franchisés
 │   ├── review/             # Relecture : limites, actions (service.py), pages (views.py)
+│   ├── content/            # Contenu interne : photos.py (traitement), service.py, pages
 │   ├── security.py         # Clé secrète, jeton CSRF, contrôle du Host et de l'origine
 │   ├── tools/
 │   │   ├── diagnose_sources.py  # Outil de diagnostic des sources
@@ -383,6 +454,7 @@ NewsFranchise/
     ├── test_collect_web.py
     ├── test_detection.py   # dont les cas étiquetés de fixtures/detection_cases.yaml
     ├── test_review.py      # Interface de relecture et sécurité
+    ├── test_content.py     # Contenu interne : Une, ouvertures, photos, rencontres, plans
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

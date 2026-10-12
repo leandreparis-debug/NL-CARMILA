@@ -20,6 +20,7 @@ RUBRIC_NEW_FRANCHISES = 1
 RUBRIC_BRAND_NEWS = 2
 ARTICLE_RUBRICS = (RUBRIC_NEW_FRANCHISES, RUBRIC_BRAND_NEWS)
 RUN_STATUSES = ("running", "success", "partial", "failed")
+DEFAULT_PLANS_LABEL = "Voir les plans de développement"
 RUN_FINAL_STATUSES = ("success", "partial", "failed")
 BODY_TEXT_MAX_LENGTH = 20_000
 EVIDENCE_MAX_LENGTH = 400
@@ -113,6 +114,7 @@ class Newsletter:
     month: str
     status: str = "draft"
     development_plans_url: str | None = None
+    development_plans_label: str | None = None  # None = « Voir les plans de développement »
     created_at: datetime | None = None
     updated_at: datetime | None = None
     id: int | None = None

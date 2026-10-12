@@ -1,0 +1,21 @@
+{# Champs d'une enseigne rencontrée. Variables : p, m (rencontre ou None), edit, item_id. #}
+<div class="grid">
+  <div class="field">
+    <label for="{{ p }}-enseigne">Enseigne</label>
+    <input type="text" id="{{ p }}-enseigne" name="enseigne" list="enseignes-suivies" maxlength="100" required
+           value="{{ val(edit, item_id, 'enseigne', m.brand_name if m else '') }}" {{ invalid(edit, item_id, 'enseigne', p ~ '-enseigne-err') }}>
+    {{ error(edit, item_id, "enseigne", p ~ "-enseigne-err") }}
+  </div>
+  <div class="field">
+    <label for="{{ p }}-date">Date (facultative)</label>
+    <input type="date" id="{{ p }}-date" name="date" value="{{ val(edit, item_id, 'date', date_value(m.meeting_date) if m else '') }}"
+           {{ invalid(edit, item_id, 'date', p ~ '-date-err') }}>
+    {{ error(edit, item_id, "date", p ~ "-date-err") }}
+  </div>
+  <div class="field">
+    <label for="{{ p }}-commentaire">Commentaire (facultatif)</label>
+    <input type="text" id="{{ p }}-commentaire" name="commentaire" maxlength="200"
+           value="{{ val(edit, item_id, 'commentaire', m.comment if m else '') }}" {{ invalid(edit, item_id, 'commentaire', p ~ '-commentaire-err') }}>
+    {{ error(edit, item_id, "commentaire", p ~ "-commentaire-err") }}
+  </div>
+</div>

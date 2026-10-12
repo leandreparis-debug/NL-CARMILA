@@ -4,5 +4,5 @@
   <h1>{{ title }}</h1>
   <p class="error-code">Erreur {{ code }}</p>
   <p>{{ message }}</p>
-  <p><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
+  <p>{% if back_url %}<a href="{{ back_url }}">Revenir à la page précédente</a> · {% endif %}<a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
 {% endblock %}

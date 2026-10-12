@@ -32,7 +32,8 @@ newsletters ─┬─< articles >──── brands
 | `id` | INTEGER | clé primaire |
 | `month` | TEXT | `AAAA-MM`, unique, mois 01 à 12 |
 | `status` | TEXT | `draft` (défaut), `reviewed`, `exported` |
-| `development_plans_url` | TEXT | rubrique 6 ; nullable ; http(s) |
+| `development_plans_url` | TEXT | rubrique 6 ; nullable ; http(s) (format vérifié, jamais appelé) |
+| `development_plans_label` | TEXT | libellé du lien, ≤ 100 caractères ; NULL = « Voir les plans de développement » (migration 0007) |
 | `created_at`, `updated_at` | TEXT | ISO 8601 |
 
 ### `brands`: référentiel des enseignes (synchronisé depuis `config/enseignes.yaml`)
@@ -94,6 +95,23 @@ newsletters ─┬─< articles >──── brands
 
 `opening_photos` : `id`, `opening_id` (→ `openings`, CASCADE), `file_name` (nom relatif dans `photos/`), `caption` (nullable), `position`.
 
+#### Stockage et traitement des photos
+
+- **Emplacement** : `<données>/photos/AAAA-MM/<identifiant>.jpg`, par exemple `%LOCALAPPDATA%\NewsFranchise\photos\2026-10\5f0c….jpg`. La base ne stocke que le nom relatif (`2026-10/5f0c….jpg`). Le nom est un identifiant aléatoire (UUID) généré par l'application, jamais celui du fichier envoyé.
+- **Vérification** : le fichier est ouvert avec Pillow ; seuls JPEG, PNG et WebP sont acceptés, quels que soient son extension et le type annoncé par le navigateur. 15 Mo au maximum par envoi (`MAX_CONTENT_LENGTH`) ; les images démesurées (plus de 60 mégapixels) sont refusées.
+- **Traitement** :
+  1. orientation EXIF appliquée (la photo est redressée) ;
+  2. transparence éventuelle posée sur fond blanc ;
+  3. réduction à 1600 px au plus sur le grand côté (jamais d'agrandissement) ;
+  4. **aucune métadonnée conservée** : EXIF, position GPS, profils et commentaires disparaissent ;
+  5. enregistrement en JPEG qualité 85, progressif.
+
+  Une photo traitée pèse en général entre 150 et 450 Ko.
+- **Photo principale** : la première photo de l'ouverture (`position` la plus basse), utilisée en priorité dans les exports.
+- **Limite** : `photos_par_ouverture` dans `config/limites.yaml` (3 par défaut), appliquée à l'envoi.
+- **Suppression** : supprimer une photo, une ouverture ou une newsletter supprime aussi les fichiers concernés. La suppression ne peut jamais sortir du dossier `photos/`.
+- **Affichage** : la route `/photos/<nom>` ne sert que des fichiers `.jpg` du dossier `photos/` ; tout chemin contenant `..`, `\` ou absolu renvoie 404.
+
 ### `meetings`: enseignes rencontrées (rubrique 4)
 `id`, `newsletter_id` (CASCADE), `brand_name` (obligatoire), `meeting_date` (nullable), `comment` (nullable), `position`.
 
@@ -133,6 +151,7 @@ Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion
 | `0004_detection.sql` | Preuves et protections de la détection (`articles.opportunity_*`, `franchisees.confidence`, `evidence`, `trigger_terms`, `edited`, `dismissed`) |
 | `0005_article_brand_label.sql` | Colonne `articles.brand_label` (enseigne « Autre ») |
 | `0006_article_user_verified.sql` | Colonne `articles.link_verified_by_user` (« lien vérifié par l'utilisateur ») |
+| `0007_development_plans_label.sql` | Colonne `newsletters.development_plans_label` (libellé du lien des plans) |
 
 ## Ajouter une migration
 

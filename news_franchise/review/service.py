@@ -145,6 +145,23 @@ def review_warnings(conn: sqlite3.Connection, newsletter_id: int, limits: Limits
         )
     if counts.validated == 0:
         warnings.append("Aucun franchisé n'est validé : la rubrique 5 sera vide.")
+    opening_count = conn.execute(
+        "SELECT COUNT(*) FROM openings WHERE newsletter_id = ?", (newsletter_id,)
+    ).fetchone()[0]
+    if opening_count == 0:
+        warnings.append("Aucune ouverture saisie : la rubrique 3 sera vide.")
+    elif opening_count > limits.ouvertures:
+        warnings.append(
+            f"Ouvertures : {opening_count} saisies pour une limite de {limits.ouvertures}."
+        )
+    meeting_count = conn.execute(
+        "SELECT COUNT(*) FROM meetings WHERE newsletter_id = ?", (newsletter_id,)
+    ).fetchone()[0]
+    if meeting_count == 0:
+        warnings.append("Aucune enseigne rencontrée saisie : la rubrique 4 sera vide.")
+    newsletter = newsletters.get_by_id(conn, newsletter_id)
+    if newsletter is not None and not newsletter.development_plans_url:
+        warnings.append("Pas de lien vers les plans de développement : la rubrique 6 sera vide.")
     if warnings:
         warnings.append(f"Rappel : la version imprimée doit tenir en {limits.pages_max} pages A4.")
     return warnings
@@ -318,7 +335,7 @@ def _target_index(ids: list[int], item_id: int, action: str, rank: str | None) -
     raise FormError("Déplacement inconnu.")
 
 
-def _place(ids: list[int], item_id: int, action: str, rank: str | None) -> list[int] | None:
+def moved_order(ids: list[int], item_id: int, action: str, rank: str | None) -> list[int] | None:
     """Ordre après déplacement ; None si l'élément ne bouge pas."""
     target = _target_index(ids, item_id, action, rank)
     if target == ids.index(item_id):
@@ -334,7 +351,7 @@ def move_article(
     """Déplace un article dans sa rubrique : « haut », « bas », « tete », « fin » ou
     « rang » (rank = numéro saisi, borné). Renvoie False s'il ne bouge pas."""
     ids = [a.id for a in articles.list_for_rubric(conn, article.newsletter_id, article.rubric)]
-    order = _place(ids, article.id, action, rank)  # type: ignore[arg-type]
+    order = moved_order(ids, article.id, action, rank)  # type: ignore[arg-type]
     if order is None:
         return False
     articles.reorder(conn, article.newsletter_id, article.rubric, order)  # type: ignore[arg-type]
@@ -346,7 +363,7 @@ def move_franchisee(
 ) -> bool:
     """Déplace un franchisé dans la liste (mêmes actions que move_article)."""
     ids = [f.id for f in franchisees.list_for_newsletter(conn, fiche.newsletter_id)]
-    order = _place(ids, fiche.id, action, rank)  # type: ignore[arg-type]
+    order = moved_order(ids, fiche.id, action, rank)  # type: ignore[arg-type]
     if order is None:
         return False
     franchisees.reorder(conn, fiche.newsletter_id, order)  # type: ignore[arg-type]

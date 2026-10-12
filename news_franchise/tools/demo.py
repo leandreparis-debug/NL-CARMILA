@@ -3,7 +3,9 @@
 Usage : python -m news_franchise.tools.demo [--reset]
 
 Crée la newsletter du mois fictif 2000-01 (et seulement celui-ci) avec des articles
-clairement marqués « [DÉMO] », dont les liens pointent vers https://example.com/demo/…
+clairement marqués « [DÉMO] », dont les liens pointent vers https://example.com/demo/…,
+deux ouvertures avec des photos générées (marquées « DÉMO »), quatre enseignes
+rencontrées et un lien de plans de démonstration.
 Ces textes sont inventés pour la démonstration : ils ne décrivent aucun fait réel. La
 détection (opportunités, franchisés) est ensuite lancée sur ce mois.
 """
@@ -11,18 +13,23 @@ détection (opportunités, franchisés) est ensuite lancée sur ce mois.
 from __future__ import annotations
 
 import argparse
+import io
+import random
 import sys
 from collections.abc import Callable, Sequence
 from contextlib import closing
 from datetime import UTC, datetime
 
+from PIL import Image, ImageDraw, ImageFont
+
 from news_franchise.bootstrap import prepare_database
 from news_franchise.config import ConfigError, Settings, load_settings
+from news_franchise.content.photos import process_photo
 from news_franchise.db import DatabaseError
 from news_franchise.db.connection import get_connection
 from news_franchise.detect.runner import run_detection
-from news_franchise.models import Article
-from news_franchise.repositories import articles, brands, newsletters
+from news_franchise.models import Article, Meeting, Opening, OpeningPhoto
+from news_franchise.repositories import articles, brands, meetings, newsletters, openings
 
 DEMO_MONTH = "2000-01"
 DEMO_SOURCE = "Source de démonstration"
@@ -122,6 +129,133 @@ DEMO_ARTICLES: tuple[tuple[int, str | None, str, str], ...] = (
 )
 
 
+# (enseigne, lieu, jour d'ouverture, description, couleurs des photos de démonstration)
+DEMO_OPENINGS: tuple[tuple[str, str, int, str, tuple[tuple[int, int, int], ...]], ...] = (
+    (
+        "Pokawa",
+        "Centre commercial Démo-Ville, Lyon",
+        12,
+        "Exemple fictif : nouveau restaurant de poke bowls en galerie marchande.",
+        ((32, 96, 160), (200, 120, 40)),
+    ),
+    (
+        "Wycon",
+        "Centre commercial Exemple, Nantes",
+        20,
+        "Exemple fictif : boutique de maquillage au rez-de-chaussée.",
+        ((150, 40, 90),),
+    ),
+)
+DEMO_MEETINGS: tuple[tuple[str, int, str], ...] = (
+    ("Leonidas", 8, "Exemple fictif : point sur les emplacements disponibles."),
+    ("Chopstix", 14, "Exemple fictif : premier contact."),
+    ("Yogurt Factory", 21, ""),
+    ("Une enseigne de démonstration", 27, "Exemple fictif."),
+)
+DEMO_PLANS_URL = "https://example.com/demo/plans"
+
+
+# Polices système avec accents (Windows, puis Linux, puis macOS).
+FONT_CANDIDATES = (
+    "arialbd.ttf",
+    "arial.ttf",
+    "DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/Library/Fonts/Arial.ttf",
+)
+
+
+def _demo_font(
+    size: int, text: str, ascii_text: str
+) -> tuple[str, ImageFont.ImageFont | ImageFont.FreeTypeFont]:
+    """Police système avec accents si disponible ; sinon police intégrée et texte sans
+    accent (la police intégrée de Pillow n'a pas « É »)."""
+    for candidate in FONT_CANDIDATES:
+        try:
+            return text, ImageFont.truetype(candidate, size)
+        except OSError:
+            continue
+    return ascii_text, ImageFont.load_default(size=size)
+
+
+def demo_photo(color: tuple[int, int, int], label: str, seed: int) -> bytes:
+    """Photo de démonstration (JPEG 2400 × 1800) clairement marquée « DÉMO ».
+
+    Dégradé, formes et léger grain, pour un poids comparable à une vraie photo.
+    """
+    rng = random.Random(seed)
+    width, height = 2400, 1800
+    image = Image.new("RGB", (width, height))
+    draw = ImageDraw.Draw(image)
+    for y in range(height):
+        shade = y / height
+        draw.line(
+            [(0, y), (width, y)],
+            fill=tuple(int(c * (0.55 + 0.45 * shade)) for c in color),
+        )
+    for _ in range(40):
+        x, y = rng.randrange(width), rng.randrange(height)
+        size = rng.randrange(60, 360)
+        tint = tuple(min(255, c + rng.randrange(0, 90)) for c in color)
+        draw.ellipse([x, y, x + size, y + size], fill=tint)
+    noise = Image.effect_noise((width, height), 28).convert("RGB")
+    image = Image.blend(image, noise, 0.12)
+    draw = ImageDraw.Draw(image)
+    title, font = _demo_font(240, "DÉMO", "DEMO")
+    draw.rectangle([0, height // 2 - 220, width, height // 2 + 220], fill=(255, 255, 255))
+    draw.text((width // 2, height // 2 - 60), title, fill=(200, 20, 30), font=font, anchor="mm")
+    caption, small = _demo_font(90, label, label.encode("ascii", "ignore").decode())
+    draw.text((width // 2, height // 2 + 140), caption, fill=(30, 30, 30), font=small, anchor="mm")
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=92)
+    return buffer.getvalue()
+
+
+def _build_internal_content(conn: object, settings: Settings, newsletter_id: int) -> None:
+    """Ouvertures avec photos, enseignes rencontrées et lien des plans de démonstration."""
+    seed = 0
+    for brand_name, location, day, description, colors in DEMO_OPENINGS:
+        opening = openings.add(
+            conn,  # type: ignore[arg-type]
+            Opening(
+                newsletter_id=newsletter_id,
+                brand_name=brand_name,
+                location=location,
+                opening_date=datetime(2000, 1, day).date(),
+                description=description,
+            ),
+        )
+        assert opening.id is not None
+        for index, color in enumerate(colors, start=1):
+            seed += 1
+            data = demo_photo(color, f"{brand_name} - photo {index}", seed)
+            saved = process_photo(data, settings.photos_dir, DEMO_MONTH, "demo.jpg")
+            openings.add_photo(
+                conn,  # type: ignore[arg-type]
+                OpeningPhoto(
+                    opening_id=opening.id,
+                    file_name=saved.file_name,
+                    caption=f"[DÉMO] {brand_name}, photo {index}",
+                ),
+            )
+    for brand_name, day, comment in DEMO_MEETINGS:
+        meetings.add(
+            conn,  # type: ignore[arg-type]
+            Meeting(
+                newsletter_id=newsletter_id,
+                brand_name=brand_name,
+                meeting_date=datetime(2000, 1, day).date(),
+                comment=comment or None,
+            ),
+        )
+    newsletters.set_development_plans(
+        conn,
+        newsletter_id,
+        DEMO_PLANS_URL,
+        "[DÉMO] Voir les plans de développement",  # type: ignore[arg-type]
+    )
+
+
 def build_demo(settings: Settings, *, reset: bool = False) -> int:
     """Crée la newsletter de démonstration 2000-01 ; renvoie le nombre d'articles créés.
 
@@ -136,7 +270,7 @@ def build_demo(settings: Settings, *, reset: bool = False) -> int:
                     "Relancez avec --reset pour la recréer."
                 )
             assert existing.id is not None
-            newsletters.delete(conn, existing.id)
+            newsletters.delete(conn, existing.id, settings.photos_dir)
         newsletter = newsletters.get_or_create(conn, DEMO_MONTH)
         assert newsletter.id is not None
         created = 0
@@ -158,6 +292,7 @@ def build_demo(settings: Settings, *, reset: bool = False) -> int:
             if articles.add(conn, article) is not None:
                 created += 1
         run_detection(conn, DEMO_MONTH)
+        _build_internal_content(conn, settings, newsletter.id)
     return created
 
 

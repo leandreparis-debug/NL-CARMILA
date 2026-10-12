@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Une {{ month_label }} — News Franchise{% endblock %}
+{% block content %}
+  {% include "review/_header.html" %}
+  <h2 class="section-title">La Une de {{ month_label }}</h2>
+  <p class="help">Ces chiffres se mettent à jour automatiquement : ils sont calculés à partir des
+    rubriques 3, 4 et 5, jamais saisis.</p>
+  <div class="figures-grid">
+    <a class="figure" href="{{ url_for('review.month', month=newsletter.month, tab='ouvertures') }}">
+      <span class="figure-number">{{ figures.openings }}</span>
+      <span class="figure-label">{{ plural(figures.openings, "ouverture", "ouvertures") }}</span>
+      <span class="figure-link">Voir la rubrique 3 →</span>
+    </a>
+    <a class="figure" href="{{ url_for('review.month', month=newsletter.month, tab='rencontres') }}">
+      <span class="figure-number">{{ figures.brands_met }}</span>
+      <span class="figure-label">{{ plural(figures.brands_met, "enseigne rencontrée", "enseignes rencontrées") }}</span>
+      <span class="figure-link">Voir la rubrique 4 →</span>
+    </a>
+    <a class="figure" href="{{ url_for('review.month', month=newsletter.month, tab='franchises') }}">
+      <span class="figure-number">{{ figures.franchisees }}</span>
+      <span class="figure-label">{{ plural(figures.franchisees, "franchisé identifié", "franchisés identifiés") }}</span>
+      {% if figures.franchisees_to_validate %}
+        <small class="figure-note">{{ figures.franchisees_to_validate }} {{ plural(figures.franchisees_to_validate, "suggestion", "suggestions") }}
+          encore à valider, non {{ plural(figures.franchisees_to_validate, "comptée", "comptées") }}.</small>
+      {% endif %}
+      <span class="figure-link">Voir la rubrique 5 →</span>
+    </a>
+  </div>
+  <p class="muted">Les enseignes rencontrées sont comptées une fois chacune, même si elles figurent
+    plusieurs fois ; seuls les franchisés validés sont comptés.</p>
+{% endblock %}

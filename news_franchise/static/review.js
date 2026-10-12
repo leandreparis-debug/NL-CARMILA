@@ -35,6 +35,17 @@
     }
   });
 
+  // Compteur de caractères des zones de texte limitées (ex. description d'une ouverture).
+  document.querySelectorAll("textarea[data-counter]").forEach(function (area) {
+    var output = document.getElementById(area.dataset.counter);
+    if (!output) { return; }
+    var update = function () {
+      output.textContent = area.value.length + " / " + area.maxLength + " caractères";
+    };
+    area.addEventListener("input", update);
+    update();
+  });
+
   // « Tout déplier / Tout replier » sans recharger la page.
   document.querySelectorAll("a.unfold-all").forEach(function (link) {
     link.addEventListener("click", function (event) {

@@ -1,0 +1,23 @@
+{# Choix d'enseigne d'une ouverture : 15 enseignes suivies ou « Autre » avec un nom libre.
+   Variables : p (préfixe des identifiants), current (nom actuel), edit, item_id. #}
+{% set typed = edit.values.get("enseigne") if edit and edit.item_id == item_id else None %}
+{% set is_other = (typed == "autre") if typed is not none else (current and current not in brand_list|map(attribute="name")|list) %}
+<div class="field">
+  <label for="{{ p }}-enseigne">Enseigne</label>
+  <select id="{{ p }}-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-autre-field" required
+          {% if edit and edit.item_id == item_id and edit.errors.get('enseigne') %}aria-invalid="true" aria-describedby="{{ p }}-enseigne-err"{% endif %}>
+    <option value="">— Choisir —</option>
+    {% for b in brand_list %}
+      <option value="{{ b.name }}" {% if (typed == b.name) or (typed is none and current == b.name) %}selected{% endif %}>{{ b.name }}</option>
+    {% endfor %}
+    <option value="autre" {% if is_other %}selected{% endif %}>Autre…</option>
+  </select>
+  {{ error(edit, item_id, "enseigne", p ~ "-enseigne-err") }}
+</div>
+<div class="field" id="{{ p }}-autre-field">
+  <label for="{{ p }}-autre">Autre enseigne</label>
+  <input type="text" id="{{ p }}-autre" name="enseigne_autre" maxlength="100"
+         value="{{ val(edit, item_id, 'enseigne_autre', current if is_other else '') }}"
+         {{ invalid(edit, item_id, 'enseigne_autre', p ~ '-autre-err') }}>
+  {{ error(edit, item_id, "enseigne_autre", p ~ "-autre-err") }}
+</div>

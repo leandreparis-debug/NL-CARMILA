@@ -24,10 +24,13 @@ from flask.typing import ResponseReturnValue
 
 from news_franchise.collect.periods import PARIS, previous_month
 from news_franchise.collect.views import app_now, month_label
+from news_franchise.content import service as content_service
+from news_franchise.content.pages import CONTENT_TABS, tab_context
+from news_franchise.content.pages import TEMPLATES as CONTENT_TEMPLATES
 from news_franchise.db.connection import get_db
 from news_franchise.http_client import Fetcher
 from news_franchise.models import Article, Franchisee, Newsletter, validate_month
-from news_franchise.repositories import articles, brands, franchisees, newsletters
+from news_franchise.repositories import articles, brands, franchisees, meetings, newsletters
 from news_franchise.review import service
 from news_franchise.review.limits import LIMITS_FILE, Limits, load_limits
 from news_franchise.review.service import FormError, LinkError
@@ -35,6 +38,16 @@ from news_franchise.review.service import FormError, LinkError
 bp = Blueprint("review", __name__, url_prefix="/newsletters")
 
 TABS = {"rubrique-1": 1, "rubrique-2": 2, "franchises": 5}
+# Onglets de l'écran du mois, dans l'ordre de la newsletter.
+TAB_LABELS = {
+    "une": "Une",
+    "rubrique-1": "1. Marché",
+    "rubrique-2": "2. Nos enseignes",
+    "ouvertures": "3. Ouvertures",
+    "rencontres": "4. Enseignes rencontrées",
+    "franchises": "5. Franchisés",
+    "plans": "6. Plans de développement",
+}
 ARTICLE_FILTERS = {
     "tous": "Tout",
     "retenus": "Retenus",
@@ -200,10 +213,25 @@ def month_home(month: str) -> ResponseReturnValue:
 
 @bp.get("/<month>/<tab>")
 def month(month: str, tab: str) -> ResponseReturnValue:
-    """Page de relecture d'un mois : onglet rubrique 1, rubrique 2 ou franchisés."""
-    if tab not in TABS:
+    """Écran du mois : Une, rubriques 1 à 6 (un onglet chacune)."""
+    if tab not in TAB_LABELS:
         abort(404)
     return _render_month(_newsletter(month), tab, request.args.get("filtre", "tous"))
+
+
+def _tabs(
+    conn: Any, newsletter: Newsletter, counts: service.Counts, limits: Limits
+) -> list[tuple[str, str, int | None, int | None]]:
+    """Onglets (clé, libellé, compteur, limite) ; compteur et limite None si sans objet."""
+    assert newsletter.id is not None
+    numbers: dict[str, tuple[int | None, int | None]] = {
+        "rubrique-1": (counts.selected_1, limits.rubrique_1),
+        "rubrique-2": (counts.selected_2, limits.rubrique_2),
+        "ouvertures": (content_service.count_openings(conn, newsletter.id), limits.ouvertures),
+        "rencontres": (len(meetings.list_for_newsletter(conn, newsletter.id)), None),
+        "franchises": (counts.validated, limits.franchises),
+    }
+    return [(key, label, *numbers.get(key, (None, None))) for key, label in TAB_LABELS.items()]
 
 
 def _render_month(
@@ -223,25 +251,15 @@ def _render_month(
         "month_label": month_label(newsletter.month),
         "status_label": service.STATUS_LABELS.get(newsletter.status, newsletter.status),
         "tab": tab,
-        "tabs": [
-            (
-                "rubrique-1",
-                "Rubrique 1 — Marché de la franchise",
-                counts.selected_1,
-                limits.rubrique_1,
-            ),
-            ("rubrique-2", "Rubrique 2 — Nos enseignes", counts.selected_2, limits.rubrique_2),
-            (
-                "franchises",
-                "Rubrique 5 — Franchisés identifiés",
-                counts.validated,
-                limits.franchises,
-            ),
-        ],
+        "tabs": _tabs(conn, newsletter, counts, limits),
         "limits": limits,
         "edit": edit,
         "unfold_all": request.args.get("deplier") == "1",
     }
+    if tab in CONTENT_TABS:
+        context.update(tab_context(conn, newsletter, tab, limits))
+        return render_template(CONTENT_TEMPLATES[tab], **context), status
+
     if tab == "franchises":
         chosen = chosen if chosen in FRANCHISEE_FILTERS else "tous"
         everything = franchisees.list_for_newsletter(conn, newsletter.id, include_dismissed=True)
@@ -288,7 +306,7 @@ def set_status(month: str) -> ResponseReturnValue:
     newsletter = _newsletter(month)
     assert newsletter.id is not None
     tab = request.form.get("onglet", "rubrique-1")
-    tab = tab if tab in TABS else "rubrique-1"
+    tab = tab if tab in TAB_LABELS else "rubrique-1"
     if request.form.get("statut") == "relue":
         for warning in service.review_warnings(get_db(), newsletter.id, _limits()):
             flash(warning, "warning")

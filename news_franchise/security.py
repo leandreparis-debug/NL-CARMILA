@@ -15,9 +15,10 @@ from pathlib import Path
 from flask import Flask, abort, render_template, request
 from flask.typing import ResponseReturnValue
 from flask_wtf.csrf import CSRFError, CSRFProtect
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, RequestEntityTooLarge
 
 from news_franchise.config import Settings
+from news_franchise.content.photos import MAX_UPLOAD_BYTES
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,9 @@ def init_security(app: Flask, settings: Settings) -> None:
     # ouverte longtemps reste utilisable.
     app.config.setdefault("WTF_CSRF_TIME_LIMIT", None)
     app.config.setdefault("SESSION_COOKIE_SAMESITE", "Strict")
+    # Taille maximale d'un envoi (photos) : 15 Mo ; au-delà, page d'erreur claire.
+    if app.config.get("MAX_CONTENT_LENGTH") is None:  # Flask le définit à None par défaut
+        app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
     csrf.init_app(app)
 
     @app.before_request
@@ -111,6 +115,26 @@ def init_security(app: Flask, settings: Settings) -> None:
                 ),
             ),
             400,
+        )
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def too_large(error: RequestEntityTooLarge) -> ResponseReturnValue:
+        """Envoi trop volumineux (photos > 15 Mo au total) : page 413 en français."""
+        limit_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+        referrer = request.referrer or ""
+        back = referrer if referrer.startswith(request.host_url) else None
+        return (
+            render_template(
+                "error.html",
+                code=413,
+                title="Fichiers trop volumineux",
+                message=(
+                    f"L'envoi dépasse {limit_mb} Mo. Envoyez les photos une par une, ou "
+                    "réduisez-les (une photo de téléphone fait en général 2 à 6 Mo)."
+                ),
+                back_url=back,
+            ),
+            413,
         )
 
     @app.errorhandler(HostNotAllowed)

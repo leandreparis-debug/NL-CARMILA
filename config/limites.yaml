@@ -2,7 +2,7 @@
 #
 # La version imprimée doit tenir en 4 pages A4 : ces limites servent de repère pendant la
 # relecture. Une rubrique qui dépasse sa limite est signalée en orange, mais rien n'est
-# bloqué. Les valeurs sont relues à chaque affichage : modifiez ce fichier, enregistrez,
+# bloqué (sauf le nombre de photos par ouverture, voir plus bas). Les valeurs sont relues à chaque affichage : modifiez ce fichier, enregistrez,
 # puis rechargez la page (inutile de relancer l'application).
 #
 # Chaque valeur est un nombre entier entre 1 et 100. Si ce fichier est absent, les valeurs
@@ -18,8 +18,13 @@ rubrique_2: 8
 # Rubrique 5 : Franchisés identifiés (fiches validées).
 franchises: 5
 
-# Rubrique 3 : Ouvertures du mois (utilisée à l'étape 7).
+# Rubrique 3 : Ouvertures du mois.
 ouvertures: 4
+
+# Rubrique 3 : nombre maximal de photos par ouverture. Contrairement aux autres limites,
+# celle-ci est appliquée : une photo de plus est refusée avec un message. La première photo
+# est la « photo principale », utilisée en priorité dans les exports.
+photos_par_ouverture: 3
 
 # Nombre maximal de pages A4 de la version imprimée (rappel affiché pendant la relecture).
 pages_max: 4

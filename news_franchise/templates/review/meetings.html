@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "review/_macros.html" import val, invalid, error %}
+{% block title %}Enseignes rencontrées {{ month_label }} — News Franchise{% endblock %}
+{% block content %}
+  {% include "review/_header.html" %}
+  <datalist id="enseignes-suivies">
+    {% for b in brand_list %}<option value="{{ b.name }}">{% endfor %}
+  </datalist>
+
+  <div class="add-row">
+    <details class="add-box" {% if not items or (edit and edit.item_id in (0, -1)) %}open{% endif %}>
+      <summary>+ Ajouter une enseigne rencontrée</summary>
+      {% if edit and edit.item_id == 0 and edit.errors.get("general") %}<p class="field-error" role="alert">{{ edit.errors.general }}</p>{% endif %}
+      <form method="post" action="{{ url_for('content.add_meeting', month=newsletter.month) }}" class="card-form" {% if edit and edit.item_id == 0 %}data-dirty="1"{% endif %}>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% with p="new", m=None, item_id=0 %}{% include "review/_meeting_fields.html" %}{% endwith %}
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+      </form>
+      <h3>Ajout rapide</h3>
+      <form method="post" action="{{ url_for('content.quick_add', month=newsletter.month) }}" class="card-form" {% if edit and edit.item_id == -1 %}data-dirty="1"{% endif %}>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="liste">Une enseigne par ligne</label>
+          <textarea id="liste" name="liste" rows="5" aria-describedby="liste-aide{% if edit and edit.item_id == -1 %} liste-err{% endif %}"
+                    {% if edit and edit.item_id == -1 %}aria-invalid="true"{% endif %}>{{ val(edit, -1, 'liste', '') }}</textarea>
+          {{ error(edit, -1, "liste", "liste-err") }}
+          <p class="help" id="liste-aide">Les lignes vides sont ignorées, ainsi que les enseignes déjà présentes ce mois-ci
+            (sans tenir compte des majuscules ni des accents) : elles vous seront signalées.</p>
+        </div>
+        <button type="submit" class="btn btn-primary">Ajouter la liste</button>
+      </form>
+    </details>
+  </div>
+
+  {% if not items %}<p class="muted">Aucune enseigne rencontrée saisie pour ce mois.</p>{% endif %}
+
+  {% for m in items %}
+    {% set p = "m" ~ m.id %}
+    {% set editing = edit and edit.item_id == m.id %}
+    <article class="card" id="rencontre-{{ m.id }}">
+      <div class="card-line">
+        <span class="card-pos" title="Rang">{{ positions[m.id] + 1 }}</span>
+        <h2 class="card-title">{{ m.brand_name }}</h2>
+        <span class="line-meta">{% if m.meeting_date %}{{ m.meeting_date.strftime("%d/%m/%Y") }}{% endif %}{% if m.comment %} · {{ m.comment }}{% endif %}</span>
+        <span class="badge badge-unsaved" {% if not editing %}hidden{% endif %}>Modifications non enregistrées</span>
+      </div>
+      <div class="card-actions">
+        {% with action=url_for('content.move_meeting', month=newsletter.month, meeting_id=m.id), position=positions[m.id], label="l'enseigne", rank_id=p ~ "-rang", filtre="tous" %}
+          {% include "review/_move.html" %}
+        {% endwith %}
+        <a class="btn btn-small btn-danger" href="{{ url_for('content.delete_meeting', month=newsletter.month, meeting_id=m.id) }}">Supprimer…</a>
+      </div>
+      <details class="card-details" {% if unfold_all or editing %}open{% endif %}>
+        <summary>Modifier</summary>
+        <form method="post" action="{{ url_for('content.save_meeting', month=newsletter.month, meeting_id=m.id) }}" class="card-form" {% if editing %}data-dirty="1"{% endif %}>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% with item_id=m.id %}{% include "review/_meeting_fields.html" %}{% endwith %}
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </form>
+      </details>
+    </article>
+  {% endfor %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='review.js') }}" defer></script>{% endblock %}

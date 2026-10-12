@@ -13,6 +13,7 @@ from werkzeug.exceptions import Forbidden, InternalServerError, NotFound
 from news_franchise.bootstrap import prepare_database
 from news_franchise.collect.views import bp as collect_bp
 from news_franchise.config import Settings, load_settings
+from news_franchise.content.views import bp as content_bp
 from news_franchise.dates import format_month_fr
 from news_franchise.db import connection as db_connection
 from news_franchise.review.views import bp as review_bp
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 FEATURES: tuple[tuple[str, str | None], ...] = (
     ("Collecter la veille", "collect.index"),
     ("Relire", "review.index"),
-    ("Contenu interne", None),
+    ("Contenu interne", "content.start"),
     ("Exporter", None),
 )
 
@@ -55,6 +56,7 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
     init_security(app, settings)
     app.register_blueprint(collect_bp)
     app.register_blueprint(review_bp)
+    app.register_blueprint(content_bp)
 
     @app.context_processor
     def inject_globals() -> dict[str, object]:

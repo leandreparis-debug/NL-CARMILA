@@ -19,7 +19,8 @@ class Limits:
     rubrique_1: int = 6  # Marché de la franchise (articles retenus)
     rubrique_2: int = 8  # Nos enseignes (articles retenus)
     franchises: int = 5  # Franchisés identifiés (validés)
-    ouvertures: int = 4  # Ouvertures du mois (étape 7)
+    ouvertures: int = 4  # Ouvertures du mois
+    photos_par_ouverture: int = 3  # Photos par ouverture (refus au-delà)
     pages_max: int = 4  # Pages A4 de la version imprimée
 
     def for_rubric(self, rubric: int) -> int:

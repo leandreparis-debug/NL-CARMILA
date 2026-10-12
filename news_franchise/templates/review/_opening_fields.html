@@ -1,0 +1,23 @@
+{# Champs d'une ouverture (ajout ou modification). Variables : p, o (ouverture ou None), edit, item_id. #}
+<div class="grid">
+  {% with current=o.brand_name if o else "" %}{% include "review/_brand_choice.html" %}{% endwith %}
+  <div class="field">
+    <label for="{{ p }}-lieu">Lieu (centre commercial et ville)</label>
+    <input type="text" id="{{ p }}-lieu" name="lieu" maxlength="150" required placeholder="Ex. : Centre commercial Rivétoile, Strasbourg"
+           value="{{ val(edit, item_id, 'lieu', o.location if o else '') }}" {{ invalid(edit, item_id, 'lieu', p ~ '-lieu-err') }}>
+    {{ error(edit, item_id, "lieu", p ~ "-lieu-err") }}
+  </div>
+  <div class="field">
+    <label for="{{ p }}-date">Date d'ouverture (facultative)</label>
+    <input type="date" id="{{ p }}-date" name="date" value="{{ val(edit, item_id, 'date', date_value(o.opening_date) if o else '') }}"
+           {{ invalid(edit, item_id, 'date', p ~ '-date-err') }}>
+    {{ error(edit, item_id, "date", p ~ "-date-err") }}
+  </div>
+  <div class="field field-wide">
+    <label for="{{ p }}-description">Description courte (facultative)</label>
+    <textarea id="{{ p }}-description" name="description" rows="3" maxlength="400" data-counter="{{ p }}-compteur"
+              aria-describedby="{{ p }}-compteur" {{ invalid(edit, item_id, 'description', p ~ '-description-err') }}>{{ val(edit, item_id, 'description', o.description if o else '') }}</textarea>
+    <p class="help" id="{{ p }}-compteur" aria-live="polite">400 caractères au maximum.</p>
+    {{ error(edit, item_id, "description", p ~ "-description-err") }}
+  </div>
+</div>

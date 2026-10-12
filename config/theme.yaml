@@ -1,0 +1,54 @@
+# Thème de la newsletter : tout ce qui relève de la charte graphique est ici, et seulement ici.
+#
+# VALEURS PROVISOIRES, sobres, À REMPLACER PAR LA CHARTE CARMILA quand elle sera disponible
+# (voir docs/theme.md). Après modification, ouvrez l'écran « Thème » de l'application : il
+# vérifie le fichier et les contrastes de couleurs.
+#
+# Règles : couleurs au format #RRGGBB ; polices système uniquement (pas de police en ligne :
+# Gmail et l'impression doivent rendre la même chose sur tous les postes) ; chemins de
+# fichiers relatifs au dossier du projet.
+
+# Nom affiché en tête de la newsletter. À remplacer par la charte Carmila.
+name: News Franchise
+
+# Phrase sous le nom. À remplacer par la charte Carmila.
+tagline: La newsletter mensuelle de Carmila Franchise
+
+colors:
+  # Couleur principale (titres, bandeaux, liens). À remplacer par la charte Carmila.
+  primary: "#1D3557"
+  # Couleur secondaire (filets, accents). À remplacer par la charte Carmila.
+  secondary: "#457B9D"
+  # Texte courant (doit contraster avec le fond : 4,5:1 au minimum).
+  text: "#1F2933"
+  # Texte secondaire (dates, sources).
+  muted: "#5B6573"
+  # Fond : reste blanc (impression et e-mail).
+  background: "#FFFFFF"
+  # Bordures et séparateurs.
+  border: "#D6DBE2"
+  # Badge « Opportunité emplacements ».
+  opportunity: "#9A4D00"
+
+fonts:
+  # Texte courant : polices système uniquement, de la préférée à la plus générique.
+  body: "Arial, Helvetica, sans-serif"
+  # Titres. À remplacer par la charte Carmila (police système équivalente).
+  headings: "Arial, Helvetica, sans-serif"
+
+# Logo (PNG ou JPEG), relatif au dossier du projet. Logo provisoire généré par
+# l'application (bandeau texte « News Franchise »). À remplacer par le logo Carmila.
+logo: config/assets/logo-provisoire.png
+
+# Texte du pied de page. À remplacer par la charte Carmila.
+footer_text: "Newsletter interne Carmila Franchise — diffusion réservée aux équipes Carmila."
+
+# Titres des rubriques, modifiables.
+section_titles:
+  une: "À la une ce mois-ci"
+  rubrique_1: "Marché de la franchise"
+  rubrique_2: "Nos enseignes"
+  rubrique_3: "Ouvertures du mois"
+  rubrique_4: "Enseignes rencontrées"
+  rubrique_5: "Franchisés identifiés"
+  rubrique_6: "Plans de développement"

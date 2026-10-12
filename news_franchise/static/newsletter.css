@@ -1,0 +1,137 @@
+/* Mise en page de la newsletter (aperçu et version imprimable).
+   Couleurs et polices : variables --nf-… définies depuis config/theme.yaml. */
+
+* { box-sizing: border-box; }
+
+body.nl-page {
+  margin: 0;
+  background: #eef0f3;
+  color: var(--nf-text);
+  font-family: var(--nf-font-body);
+}
+
+.preview-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0.6rem 0;
+  font-size: 0.9rem;
+  color: #374151;
+}
+.preview-bar a { color: #1f2937; }
+
+.nl {
+  max-width: 800px;
+  margin: 0 auto 2rem;
+  padding: 32px 40px;
+  background: var(--nf-background);
+  color: var(--nf-text);
+  font-family: var(--nf-font-body);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.nl h2, .nl h3 { font-family: var(--nf-font-headings); }
+.nl a { color: var(--nf-primary); }
+
+.nl-header { text-align: center; border-bottom: 3px solid var(--nf-secondary); padding-bottom: 12px; }
+.nl-logo { max-width: 360px; max-height: 80px; }
+.nl-tagline { margin: 6px 0 0; color: var(--nf-muted); }
+.nl-month { margin: 4px 0 0; font-size: 1.3rem; font-weight: 700; color: var(--nf-primary); }
+
+.nl-une { margin: 20px 0; }
+.nl-une-title { margin: 0 0 10px; color: var(--nf-primary); font-size: 1.3rem; }
+.nl-figures { display: flex; gap: 12px; }
+.nl-figure {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 1px solid var(--nf-border);
+  border-top: 4px solid var(--nf-primary);
+  text-decoration: none;
+  color: var(--nf-text);
+}
+.nl a.nl-figure { color: var(--nf-text); }
+.nl-figure-value { font-size: 2rem; font-weight: 700; color: var(--nf-primary); line-height: 1.1; }
+.nl-figure-label { color: var(--nf-text); text-align: center; }
+
+.nl-toc { border: 1px solid var(--nf-border); padding: 10px 16px; margin-bottom: 20px; }
+.nl-toc-title { margin: 0 0 6px; font-size: 1.05rem; color: var(--nf-primary); }
+.nl-toc-list { list-style: none; margin: 0; padding: 0; }
+.nl-toc-list li { padding: 2px 0; }
+.nl-toc-number { display: inline-block; min-width: 1.6em; font-weight: 700; color: var(--nf-primary); }
+.nl-toc-count { color: var(--nf-muted); }
+.nl-toc-count::before { content: " — "; }
+
+.nl-section { margin-top: 24px; }
+.nl-section-title {
+  margin: 0 0 12px;
+  padding: 6px 12px;
+  background: var(--nf-primary);
+  color: var(--nf-background);
+  font-size: 1.15rem;
+}
+.nl-section-number {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: 4px;
+  border-right: 1px solid var(--nf-background);
+}
+
+.nl-article, .nl-opening, .nl-franchisee {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--nf-border);
+  break-inside: avoid;
+}
+.nl-article-title, .nl-item-title { margin: 0 0 6px; font-size: 1.05rem; }
+.nl-article-title a { text-decoration: none; }
+.nl-article-body { display: flex; gap: 12px; align-items: flex-start; }
+.nl-qr { flex: 0 0 76px; }
+.nl-qr svg { display: block; width: 76px; height: 76px; }
+.nl-article-text { flex: 1; }
+.nl-article-text p, .nl-opening-text p, .nl-franchisee p { margin: 0 0 4px; }
+.nl-meta, .nl-meta-inline, .nl-source, .nl-url { color: var(--nf-muted); font-size: 0.9rem; }
+.nl-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--nf-opportunity);
+  border-radius: 3px;
+  color: var(--nf-opportunity);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.nl-opening { display: flex; gap: 14px; align-items: flex-start; }
+.nl-photo { margin: 0; flex: 0 0 260px; }
+.nl-photo img { display: block; width: 260px; height: auto; }
+.nl-photo figcaption { color: var(--nf-muted); font-size: 0.8rem; margin-top: 2px; }
+.nl-opening-text { flex: 1; }
+
+.nl-meetings { margin: 0; padding-left: 20px; }
+.nl-meetings li { padding: 3px 0; }
+.nl-comment { color: var(--nf-muted); }
+
+.nl-plans { margin: 0; }
+.nl-plans-link { font-weight: 700; }
+.nl-url { word-break: break-all; }
+
+.nl-footer {
+  margin-top: 28px;
+  padding-top: 10px;
+  border-top: 3px solid var(--nf-secondary);
+  color: var(--nf-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.nl-footer p { margin: 2px 0; }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body.nl-page { background: #fff; }
+  .preview-bar { display: none; }
+  .nl { max-width: none; margin: 0; padding: 0; }
+  .nl-section-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; break-after: avoid; }
+}

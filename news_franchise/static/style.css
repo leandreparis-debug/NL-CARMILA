@@ -270,3 +270,14 @@ ul.evidence q { color: #374151; font-style: italic; }
 .upload-form label { font-size: 0.9rem; font-weight: 600; }
 .plans-current .url { color: var(--muted); }
 @media (max-width: 900px) { .figures-grid { grid-template-columns: 1fr; } }
+
+/* Écran « Thème » */
+.theme-list { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.2rem; }
+.theme-list dt { font-weight: 600; }
+.theme-list dd { margin: 0; }
+.theme-logo { max-width: 300px; max-height: 80px; border: 1px solid #d1d5db; }
+.theme-table { border-collapse: collapse; width: 100%; background: #fff; }
+.theme-table th, .theme-table td { border: 1px solid #e5e7eb; padding: 0.4rem 0.6rem; text-align: left; }
+.swatch { display: inline-block; width: 3rem; height: 1.2rem; border: 1px solid #9ca3af; vertical-align: middle; }
+.contrast-sample { display: inline-block; padding: 0.1rem 0.5rem; border: 1px solid #d1d5db; font-weight: 600; margin-right: 0.4rem; }
+.head-actions { display: flex; gap: 0.5rem; align-items: flex-start; }

@@ -1,0 +1,13 @@
+{# Sommaire : rubriques publiées seulement, avec leur nombre d'éléments. #}
+<nav class="nl-toc" aria-label="Sommaire">
+  <h2 class="nl-toc-title">Sommaire</h2>
+  <ol class="nl-toc-list">
+    {% for entry in view.toc %}
+      <li>
+        <span class="nl-toc-number">{{ entry.number }}.</span>
+        {% if medium == "print" %}<a href="#{{ entry.anchor }}">{{ entry.title }}</a>{% else %}{{ entry.title }}{% endif %}
+        <span class="nl-toc-count">{{ entry.count_label }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

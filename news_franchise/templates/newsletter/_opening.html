@@ -1,0 +1,14 @@
+{# Ouverture (rubrique 3) avec sa photo principale. #}
+<article class="nl-opening">
+  {% if item.main_photo %}
+    <figure class="nl-photo">
+      <img src="{{ photo_src[item.main_photo.file_name] }}" alt="{{ item.main_photo.caption or 'Ouverture ' ~ item.brand }}">
+      {% if item.main_photo.caption %}<figcaption>{{ item.main_photo.caption }}</figcaption>{% endif %}
+    </figure>
+  {% endif %}
+  <div class="nl-opening-text">
+    <h3 class="nl-item-title">{{ item.brand }}</h3>
+    <p class="nl-meta">{{ item.location }}{% if item.date_label %} · ouverture le {{ item.date_label }}{% endif %}</p>
+    {% if item.description %}<p>{{ item.description }}</p>{% endif %}
+  </div>
+</article>

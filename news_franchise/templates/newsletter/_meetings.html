@@ -1,0 +1,9 @@
+{# Enseignes rencontrées (rubrique 4) : liste compacte. #}
+<ul class="nl-meetings">
+  {% for item in section.items %}
+    <li>
+      <strong>{{ item.brand }}</strong>{% if item.date_label %} <span class="nl-meta-inline">· {{ item.date_label }}</span>{% endif %}
+      {% if item.comment %}<br><span class="nl-comment">{{ item.comment }}</span>{% endif %}
+    </li>
+  {% endfor %}
+</ul>

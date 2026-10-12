@@ -16,6 +16,7 @@ from news_franchise.config import Settings, load_settings
 from news_franchise.content.views import bp as content_bp
 from news_franchise.dates import format_month_fr
 from news_franchise.db import connection as db_connection
+from news_franchise.newsletter.views import bp as newsletter_bp
 from news_franchise.review.views import bp as review_bp
 from news_franchise.security import init_security
 from news_franchise.version import __version__
@@ -30,6 +31,7 @@ FEATURES: tuple[tuple[str, str | None], ...] = (
     ("Relire", "review.index"),
     ("Contenu interne", "content.start"),
     ("Exporter", None),
+    ("Thème", "newsletter.theme"),
 )
 
 
@@ -57,6 +59,7 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
     app.register_blueprint(collect_bp)
     app.register_blueprint(review_bp)
     app.register_blueprint(content_bp)
+    app.register_blueprint(newsletter_bp)
 
     @app.context_processor
     def inject_globals() -> dict[str, object]:

@@ -292,6 +292,49 @@ La démonstration (`python -m news_franchise.tools.demo`) contient maintenant au
 - 4 enseignes rencontrées ;
 - un lien de plans vers `example.com`.
 
+## Aperçu de la newsletter
+
+Dans l'écran du mois, le bouton **Aperçu** (en haut à droite) affiche la newsletter telle
+qu'elle sera publiée, en version imprimable : page blanche d'environ 800 px de large.
+
+- **En-tête** : logo, phrase d'accroche, mois (« Octobre 2026 »).
+- **À la une** : nombre d'ouvertures, d'enseignes rencontrées et de franchisés identifiés,
+  toujours calculés ; chaque chiffre renvoie à sa rubrique.
+- **Sommaire** : rubriques publiées avec leur nombre d'éléments.
+- **Rubriques**, dans l'ordre de la relecture : seuls les articles **retenus** et les
+  franchisés **validés** apparaissent. Une rubrique vide est masquée, et les rubriques
+  publiées sont renumérotées sans trou (1, 2, 3…).
+- Sous le titre de chaque article : un **QR code** du lien de l'article (pour la version
+  papier), le badge **« Opportunité emplacements »** si besoin, la source, la date et
+  l'extrait.
+- Ouvertures : **photo principale** (choisie dans le contenu interne) et sa légende.
+- Franchisés : le nombre de points de vente n'apparaît que s'il est connu.
+- **Pied de page** : texte défini dans le thème.
+
+Les dates sont écrites en français quel que soit le réglage de Windows, avec la convention
+« 1er » pour le premier jour du mois (« 1er octobre 2026 », « 12 octobre 2026 »).
+
+Les QR codes (correction d'erreur M) sont conservés dans `<données>\exports\qr\`, sous
+un nom tiré de l'empreinte SHA-256 du lien : ils ne sont produits qu'une fois. Un QR code
+n'est produit que pour un lien `http://` ou `https://`.
+
+Ctrl + P depuis l'aperçu donne déjà une impression A4 (la démonstration tient en 4 pages) ; les exports e-mail et A4
+arrivent dans les étapes suivantes et reprendront les mêmes gabarits
+(`news_franchise/templates/newsletter/_*.html`).
+
+## Thème et charte graphique
+
+Tout ce qui relève de la charte graphique est dans **`config/theme.yaml`** : nom, phrase
+d'accroche, couleurs, polices, logo, pied de page et titres des rubriques. Les valeurs
+actuelles sont **provisoires** et sont à remplacer par la charte Carmila : mode d'emploi
+dans [`docs/theme.md`](docs/theme.md).
+
+L'écran **Thème** (bouton sur la page d'accueil) affiche le thème en lecture seule :
+couleurs, polices, logo, chemin du fichier à modifier et **vérification des contrastes**
+(minimum conseillé 4,5:1). Un contraste insuffisant donne un avertissement, sans bloquer ;
+une valeur invalide (couleur qui n'est pas au format `#RRGGBB`, logo introuvable…) donne
+un message d'erreur clair indiquant la clé à corriger.
+
 ## Franchisés et opportunités
 
 Après chaque collecte, l'application propose automatiquement :
@@ -398,10 +441,13 @@ NewsFranchise/
 │   ├── regles_detection.yaml # Règles « opportunité » et franchisés
 │   ├── lieux_france.yaml   # Régions, départements, grandes villes
 │   ├── limites.yaml        # Limites éditoriales par rubrique
+│   ├── theme.yaml          # Charte graphique de la newsletter (valeurs provisoires)
+│   ├── assets/             # Logo (logo provisoire généré par l'application)
 │   └── sources.example.yaml  # Format documenté de config/sources.yaml
 ├── docs/
 │   ├── data-model.md       # Modèle de données et procédure de migration
 │   ├── detection.md        # Détection des opportunités et des franchisés
+│   ├── theme.md            # Appliquer la charte Carmila au thème
 │   └── securite.md         # CSRF, contrôle du Host, échappement, liens non modifiables
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
@@ -431,6 +477,7 @@ NewsFranchise/
 │   ├── detect/             # Détection : règles, phrases, lieux, opportunités, franchisés
 │   ├── review/             # Relecture : limites, actions (service.py), pages (views.py)
 │   ├── content/            # Contenu interne : photos.py (traitement), service.py, pages
+│   ├── newsletter/         # Thème, dates, QR codes, vue de la newsletter, aperçu
 │   ├── security.py         # Clé secrète, jeton CSRF, contrôle du Host et de l'origine
 │   ├── tools/
 │   │   ├── diagnose_sources.py  # Outil de diagnostic des sources
@@ -438,8 +485,8 @@ NewsFranchise/
 │   │   ├── detect.py       # Détection en ligne de commande
 │   │   ├── evaluate_detection.py  # Rapport de fiabilité de la détection
 │   │   └── demo.py         # Newsletter de démonstration (janvier 2000)
-│   ├── templates/          # Gabarits Jinja2 (base, accueil, erreur)
-│   └── static/             # Feuille de style
+│   ├── templates/          # Gabarits Jinja2 ; newsletter/_*.html : gabarits communs
+│   └── static/             # Feuilles de style (application, newsletter)
 └── tests/
     ├── conftest.py         # Fixtures (données dans tmp_path, réseau interdit)
     ├── helpers.py          # Données de référence et simulation HTTP (respx)
@@ -455,6 +502,7 @@ NewsFranchise/
     ├── test_detection.py   # dont les cas étiquetés de fixtures/detection_cases.yaml
     ├── test_review.py      # Interface de relecture et sécurité
     ├── test_content.py     # Contenu interne : Une, ouvertures, photos, rencontres, plans
+    ├── test_newsletter.py  # Thème, dates, vue, QR codes, aperçu
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

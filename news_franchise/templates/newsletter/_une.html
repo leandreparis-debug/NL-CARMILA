@@ -1,0 +1,20 @@
+{# Une : trois chiffres calculés (ouvertures, enseignes rencontrées, franchisés identifiés).
+   Un chiffre dont la rubrique est vide n'a pas de lien (la rubrique n'est pas publiée). #}
+<section class="nl-une" aria-labelledby="nl-une-titre">
+  <h2 class="nl-une-title" id="nl-une-titre">{{ view.front_title }}</h2>
+  <div class="nl-figures">
+    {% for figure in view.front %}
+      {% if figure.anchor and medium == "print" %}
+        <a class="nl-figure" href="#{{ figure.anchor }}">
+          <span class="nl-figure-value">{{ figure.value }}</span>
+          <span class="nl-figure-label">{{ figure.label }}</span>
+        </a>
+      {% else %}
+        <div class="nl-figure">
+          <span class="nl-figure-value">{{ figure.value }}</span>
+          <span class="nl-figure-label">{{ figure.label }}</span>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>

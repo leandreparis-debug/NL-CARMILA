@@ -5,6 +5,8 @@
     <h1>Relecture : {{ month_label }}
       <span class="badge status-{{ newsletter.status }}">{{ status_label }}</span></h1>
   </div>
+  <div class="head-actions">
+  <a class="btn" href="{{ url_for('newsletter.preview', month=newsletter.month) }}">Aperçu</a>
   <form method="post" action="{{ url_for('review.set_status', month=newsletter.month) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="onglet" value="{{ tab }}">
@@ -14,6 +16,7 @@
       <button type="submit" name="statut" value="brouillon" class="btn">Repasser en brouillon</button>
     {% endif %}
   </form>
+  </div>
 </div>
 
 <nav class="tabs" aria-label="Rubriques">

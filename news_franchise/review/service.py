@@ -42,11 +42,32 @@ OTHER_BRAND = "autre"
 
 
 class FormError(ValueError):
-    """Saisie refusée ; le message (en français) est affiché à l'utilisateur."""
+    """Saisie refusée ; le message (en français) est affiché à côté du champ fautif."""
+
+    def __init__(self, message: str, field: str | None = None) -> None:
+        """field : nom du champ de formulaire concerné (None si aucun en particulier)."""
+        super().__init__(message)
+        self.field = field
 
 
 class LinkError(FormError):
     """Lien ajouté à la main qui ne peut pas être vérifié."""
+
+
+class LinkRefused(LinkError):
+    """Le site répond mais refuse la lecture automatique (403, protection anti-robot).
+
+    L'utilisateur peut alors confirmer lui-même que le lien affiche bien l'article.
+    """
+
+    def __init__(self, message: str, field: str | None, final_url: str) -> None:
+        """final_url : adresse atteinte (après redirections éventuelles)."""
+        super().__init__(message, field)
+        self.final_url = final_url
+
+
+# Réponses d'un site qui existe mais bloque les robots (lecture automatique refusée).
+REFUSED_STATUSES = frozenset({401, 403, 406, 429, 503})
 
 
 # --------------------------------------------------------------------------- vue d'ensemble
@@ -139,11 +160,12 @@ def text_field(
     value = " ".join((form.get(name) or "").split())
     if not value:
         if required:
-            raise FormError(f"Le champ « {label} » est obligatoire.")
+            raise FormError(f"Le champ « {label} » est obligatoire.", name)
         return None
     if len(value) > max_length:
         raise FormError(
-            f"Le champ « {label} » est trop long ({len(value)} caractères, {max_length} au plus)."
+            f"Le champ « {label} » est trop long ({len(value)} caractères, {max_length} au plus).",
+            name,
         )
     return value
 
@@ -156,9 +178,11 @@ def date_field(form: Mapping[str, str], name: str, label: str) -> date | None:
     try:
         value = date.fromisoformat(raw)
     except ValueError:
-        raise FormError(f"Le champ « {label} » n'est pas une date valide (JJ/MM/AAAA).") from None
+        raise FormError(
+            f"Le champ « {label} » n'est pas une date valide (JJ/MM/AAAA).", name
+        ) from None
     if not 1990 <= value.year <= 2100:
-        raise FormError(f"Le champ « {label} » contient une année improbable ({value.year}).")
+        raise FormError(f"Le champ « {label} » contient une année improbable ({value.year}).", name)
     return value
 
 
@@ -169,7 +193,8 @@ def store_count_field(form: Mapping[str, str], name: str) -> int | None:
         return None
     if not raw.isdigit() or int(raw) > MAX_STORE_COUNT:
         raise FormError(
-            "Le nombre de points de vente doit être un nombre entier positif (ou rester vide)."
+            "Le nombre de points de vente doit être un nombre entier positif (ou rester vide).",
+            name,
         )
     return int(raw)
 
@@ -178,14 +203,15 @@ def url_field(form: Mapping[str, str], name: str, label: str) -> str:
     """Lien http(s) obligatoire."""
     raw = (form.get(name) or "").strip()
     if not raw:
-        raise FormError(f"Le champ « {label} » est obligatoire.")
+        raise FormError(f"Le champ « {label} » est obligatoire.", name)
     if len(raw) > MAX_URL:
-        raise FormError(f"Le champ « {label} » est trop long.")
+        raise FormError(f"Le champ « {label} » est trop long.", name)
     try:
         return validate_url(raw, label)
     except ValueError:
         raise FormError(
-            f"Le champ « {label} » doit être une adresse commençant par http:// ou https://."
+            f"Le champ « {label} » doit être une adresse commençant par http:// ou https://.",
+            name,
         ) from None
 
 
@@ -209,11 +235,13 @@ def _brand_choice(
     if choice == OTHER_BRAND:
         label = text_field(form, "enseigne_autre", "Autre enseigne", MAX_BRAND_LABEL)
         if label is None:
-            raise FormError("Indiquez le nom de l'enseigne dans le champ « Autre enseigne ».")
+            raise FormError(
+                "Indiquez le nom de l'enseigne dans le champ « Autre enseigne ».", "enseigne_autre"
+            )
         return None, label
     brand = next((b for b in brands if str(b.id) == choice), None)
     if brand is None:
-        raise FormError("Enseigne inconnue.")
+        raise FormError("Enseigne inconnue.", "enseigne")
     return brand, None
 
 
@@ -223,7 +251,8 @@ def apply_article_form(
     """Article modifié d'après le formulaire de sa carte.
 
     L'URL n'est jamais lue dans le formulaire : un champ « url » ajouté à la requête est
-    ignoré. Lève FormError si une saisie est invalide.
+    ignoré. « Retenir » ne se règle pas ici (bouton rapide dédié). Lève FormError si une
+    saisie est invalide.
     """
     brand, brand_label = _brand_choice(form, brands)
     sector = text_field(form, "secteur", "Secteur", MAX_SECTOR)
@@ -231,7 +260,6 @@ def apply_article_form(
         sector = brand.sector or None
     return replace(
         article,
-        selected="retenir" in form,
         is_opportunity="opportunite" in form,
         brand_id=brand.id if brand else None,
         brand_label=brand_label,
@@ -245,14 +273,16 @@ def apply_article_form(
 
 
 def apply_franchisee_form(fiche: Franchisee, form: Mapping[str, str]) -> Franchisee:
-    """Franchisé modifié d'après le formulaire de sa carte (la source n'est pas modifiable)."""
+    """Franchisé modifié d'après le formulaire de sa carte.
+
+    La source n'est pas modifiable ; « Valider » se règle avec le bouton rapide dédié.
+    """
     return replace(
         fiche,
         name=text_field(form, "nom", "Nom", MAX_NAME, required=True),
         brands=text_field(form, "enseignes", "Enseigne(s)", MAX_BRANDS) or "",
         location=text_field(form, "lieu", "Ville ou région", MAX_LOCATION),
         store_count=store_count_field(form, "nombre"),
-        validated="valider" in form,
         source_url=fiche.source_url,
         source_name=fiche.source_name,
     )
@@ -261,34 +291,95 @@ def apply_franchisee_form(fiche: Franchisee, form: Mapping[str, str]) -> Franchi
 # --------------------------------------------------------------------------- ordre
 
 
-def _swap(ids: list[int], item_id: int, direction: str) -> list[int] | None:
-    """Ordre après avoir monté ou descendu un élément ; None s'il est déjà en bout."""
+def parse_rank(raw: str | None, count: int) -> int:
+    """Rang saisi (1 = en tête), borné entre 1 et count ; renvoie l'index (0 = en tête).
+
+    Lève FormError si la saisie n'est pas un nombre entier.
+    """
+    value = (raw or "").strip()
+    if not value.lstrip("-").isdigit():
+        raise FormError("Le rang doit être un numéro (1 = en tête de liste).", "rang")
+    return min(max(int(value), 1), max(count, 1)) - 1
+
+
+def _target_index(ids: list[int], item_id: int, action: str, rank: str | None) -> int:
+    """Nouvel index d'un élément selon l'action : haut, bas, tete, fin ou rang."""
     index = ids.index(item_id)
-    target = index - 1 if direction == "haut" else index + 1
-    if direction not in ("haut", "bas") or not 0 <= target < len(ids):
+    if action == "haut":
+        return max(index - 1, 0)
+    if action == "bas":
+        return min(index + 1, len(ids) - 1)
+    if action == "tete":
+        return 0
+    if action == "fin":
+        return len(ids) - 1
+    if action == "rang":
+        return parse_rank(rank, len(ids))
+    raise FormError("Déplacement inconnu.")
+
+
+def _place(ids: list[int], item_id: int, action: str, rank: str | None) -> list[int] | None:
+    """Ordre après déplacement ; None si l'élément ne bouge pas."""
+    target = _target_index(ids, item_id, action, rank)
+    if target == ids.index(item_id):
         return None
-    ids[index], ids[target] = ids[target], ids[index]
+    ids.remove(item_id)
+    ids.insert(target, item_id)
     return ids
 
 
-def move_article(conn: sqlite3.Connection, article: Article, direction: str) -> bool:
-    """Monte (« haut ») ou descend (« bas ») un article dans sa rubrique."""
+def move_article(
+    conn: sqlite3.Connection, article: Article, action: str, rank: str | None = None
+) -> bool:
+    """Déplace un article dans sa rubrique : « haut », « bas », « tete », « fin » ou
+    « rang » (rank = numéro saisi, borné). Renvoie False s'il ne bouge pas."""
     ids = [a.id for a in articles.list_for_rubric(conn, article.newsletter_id, article.rubric)]
-    order = _swap(ids, article.id, direction)  # type: ignore[arg-type]
+    order = _place(ids, article.id, action, rank)  # type: ignore[arg-type]
     if order is None:
         return False
     articles.reorder(conn, article.newsletter_id, article.rubric, order)  # type: ignore[arg-type]
     return True
 
 
-def move_franchisee(conn: sqlite3.Connection, fiche: Franchisee, direction: str) -> bool:
-    """Monte ou descend un franchisé dans la liste."""
+def move_franchisee(
+    conn: sqlite3.Connection, fiche: Franchisee, action: str, rank: str | None = None
+) -> bool:
+    """Déplace un franchisé dans la liste (mêmes actions que move_article)."""
     ids = [f.id for f in franchisees.list_for_newsletter(conn, fiche.newsletter_id)]
-    order = _swap(ids, fiche.id, direction)  # type: ignore[arg-type]
+    order = _place(ids, fiche.id, action, rank)  # type: ignore[arg-type]
     if order is None:
         return False
     franchisees.reorder(conn, fiche.newsletter_id, order)  # type: ignore[arg-type]
     return True
+
+
+def change_rubric(
+    conn: sqlite3.Connection,
+    article: Article,
+    target: str | None,
+    form: Mapping[str, str],
+    brands: Sequence[Brand],
+) -> Article:
+    """Déplace un article vers l'autre rubrique (en fin de liste).
+
+    Vers la rubrique 2 (« Nos enseignes »), l'enseigne est obligatoire : une des enseignes
+    suivies, ou « Autre » avec son nom. Vers la rubrique 1, l'article est conservé tel
+    quel, avec son enseigne éventuelle. Lève FormError sinon.
+    """
+    if target not in ("1", "2") or int(target) == article.rubric:
+        raise FormError("Rubrique de destination invalide.")
+    assert article.id is not None
+    if target == "1":
+        return articles.move_to_rubric(
+            conn, article.id, 1, article.brand_id, article.brand_label, article.sector
+        )
+    brand, label = _brand_choice(form, brands)
+    if brand is None and label is None:
+        raise FormError(
+            "Choisissez l'enseigne de l'article pour le déplacer vers la rubrique 2.", "enseigne"
+        )
+    sector = brand.sector if brand and brand.sector else article.sector
+    return articles.move_to_rubric(conn, article.id, 2, brand.id if brand else None, label, sector)
 
 
 def keep_first(conn: sqlite3.Connection, newsletter_id: int, rubric: int, n: int) -> int:
@@ -346,21 +437,25 @@ def _published(soup: BeautifulSoup) -> date | None:
 def preview_link(fetcher: Fetcher, url: str) -> PagePreview:
     """Vérifie qu'un lien répond (2xx après redirections) et lit titre et premières lignes.
 
-    robots.txt est respecté. Lève LinkError avec un message clair si le lien est invalide,
-    ne répond pas ou ne peut pas être lu.
+    Le lien est demandé par l'utilisateur : robots.txt ne bloque pas cette vérification
+    (une seule page lue, comme le ferait son navigateur). Lève LinkRefused si le site
+    répond mais refuse la lecture automatique (403…), LinkError si le lien est invalide
+    ou ne répond pas.
     """
     try:
-        url = url_field({"url": url}, "url", "Lien")
+        url = url_field({"lien": url}, "lien", "Lien")
     except FormError as exc:
-        raise LinkError(str(exc)) from None
-    result = fetcher.fetch(url, check_robots=True)
-    if result.blocked_by_robots:
-        raise LinkError(
-            "Ce site interdit la lecture automatique de cette page (fichier robots.txt) : "
-            "le lien ne peut pas être vérifié."
+        raise LinkError(str(exc), "lien") from None
+    result = fetcher.fetch(url, check_robots=False)
+    if result.status_code in REFUSED_STATUSES:
+        raise LinkRefused(
+            f"Le site refuse la lecture automatique de cette page ({result.error}) : "
+            "l'application ne peut pas vérifier le lien elle-même.",
+            "lien",
+            result.final_url or url,
         )
     if not result.ok:
-        raise LinkError(f"Le lien ne répond pas correctement : {result.error}")
+        raise LinkError(f"Le lien ne répond pas correctement : {result.error}", "lien")
     final_url = clean_url(validate_url(result.final_url or url))
     soup = BeautifulSoup(result.text or "", "html.parser")
     title = _meta(soup, "og:title", "twitter:title")
@@ -392,31 +487,58 @@ def find_duplicate(conn: sqlite3.Connection, newsletter_id: int, url: str) -> Ar
 def add_manual_article(
     conn: sqlite3.Connection,
     newsletter_id: int,
-    preview: PagePreview,
+    preview: PagePreview | None,
     form: Mapping[str, str],
     brands: Sequence[Brand],
+    *,
+    refused_url: str | None = None,
 ) -> Article:
-    """Enregistre un article ajouté à la main (lien vérifié, saisies validées).
+    """Enregistre un article ajouté à la main (retenu, en fin de rubrique).
 
-    Lève FormError si une saisie est invalide ou si l'article est déjà dans la newsletter.
+    preview : page lue et vérifiée par l'application. Si le site a refusé la lecture
+    automatique (preview None, refused_url = adresse atteinte), l'utilisateur doit avoir
+    coché « J'ai ouvert ce lien… » (champ « confirme ») : l'article est alors marqué
+    « lien vérifié par l'utilisateur ». Lève FormError si une saisie est invalide, si la
+    confirmation manque ou si l'article est déjà dans la newsletter.
     """
     rubric = 2 if form.get("rubrique") == "2" else 1
-    if find_duplicate(conn, newsletter_id, preview.url) is not None:
-        raise FormError("Cet article est déjà dans la newsletter de ce mois.")
+    if preview is None:
+        if refused_url is None:
+            raise FormError("Lien non vérifié.", "lien")
+        if "confirme" not in form:
+            raise FormError(
+                "Cochez la case de confirmation : le site refuse la lecture automatique, "
+                "l'application ne peut donc pas vérifier ce lien elle-même.",
+                "confirme",
+            )
+        url = clean_url(validate_url(refused_url))
+    else:
+        url = preview.url
+    if find_duplicate(conn, newsletter_id, url) is not None:
+        raise FormError("Cet article est déjà dans la newsletter de ce mois.", "lien")
     draft = Article(
         newsletter_id=newsletter_id,
         rubric=rubric,
-        title=preview.title or "-",
-        source_name=preview.source_name or "-",
-        url=preview.url,
-        body_text=preview.body_text or None,
+        title=(preview.title if preview else "") or "-",
+        source_name=(preview.source_name if preview else "") or "-",
+        url=url,
+        body_text=(preview.body_text or None) if preview else None,
         collected_at=utcnow(),
+        selected=True,
+        link_verified_by_user=preview is None,
     )
-    article = apply_article_form(draft, {**form, "retenir": "on"}, brands)
+    article = apply_article_form(draft, form, brands)
     added = articles.add(conn, article)
     if added is None:
-        raise FormError("Cet article est déjà dans la newsletter de ce mois.")
+        raise FormError("Cet article est déjà dans la newsletter de ce mois.", "lien")
     return added
+
+
+def restore_franchisee(conn: sqlite3.Connection, fiche: Franchisee) -> None:
+    """Restaure une suggestion écartée : elle redevient une suggestion non validée."""
+    assert fiche.id is not None
+    franchisees.set_dismissed(conn, fiche.id, False)
+    franchisees.set_validated(conn, fiche.id, False)
 
 
 def add_manual_franchisee(
@@ -428,7 +550,10 @@ def add_manual_franchisee(
     location = text_field(form, "lieu", "Ville ou région", MAX_LOCATION)
     count = store_count_field(form, "nombre")
     source_name = text_field(form, "source", "Source", MAX_SOURCE)
-    preview = preview_link(fetcher, form.get("lien_source") or "")
+    try:
+        preview = preview_link(fetcher, form.get("lien_source") or "")
+    except LinkError as exc:
+        raise LinkError(str(exc), "lien_source") from None
     return franchisees.add(
         conn,
         Franchisee(

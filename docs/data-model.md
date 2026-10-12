@@ -53,6 +53,7 @@ newsletters ─┬─< articles >──── brands
 | `newsletter_id` | INTEGER | → `newsletters`, CASCADE |
 | `rubric` | INTEGER | 1 (nouvelles franchises) ou 2 (actualités des enseignes) |
 | `brand_id` | INTEGER | → `brands`, nullable |
+| `link_verified_by_user` | INTEGER | 1 = ajout manuel d'un lien que le site refuse de laisser lire automatiquement, confirmé par l'utilisateur (migration 0006) |
 | `brand_label` | TEXT | enseigne « Autre » saisie à la relecture (hors des enseignes suivies), ≤ 100 caractères, nullable (migration 0005) |
 | `sector` | TEXT | nullable |
 | `title` | TEXT | obligatoire |
@@ -131,6 +132,7 @@ Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion
 | `0003_brand_case_sensitive.sql` | Colonne `brands.case_sensitive` |
 | `0004_detection.sql` | Preuves et protections de la détection (`articles.opportunity_*`, `franchisees.confidence`, `evidence`, `trigger_terms`, `edited`, `dismissed`) |
 | `0005_article_brand_label.sql` | Colonne `articles.brand_label` (enseigne « Autre ») |
+| `0006_article_user_verified.sql` | Colonne `articles.link_verified_by_user` (« lien vérifié par l'utilisateur ») |
 
 ## Ajouter une migration
 

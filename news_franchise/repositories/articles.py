@@ -19,7 +19,8 @@ from news_franchise.repositories._common import (
 _COLUMNS = (
     "id, newsletter_id, rubric, brand_id, sector, title, published_at, source_name, url,"
     " excerpt, is_opportunity, selected, position, collected_at, body_text,"
-    " opportunity_source, opportunity_evidence, opportunity_terms, brand_label"
+    " opportunity_source, opportunity_evidence, opportunity_terms, brand_label,"
+    " link_verified_by_user"
 )
 _SCOPE = "newsletter_id = ? AND rubric = ?"
 
@@ -46,6 +47,7 @@ def _from_row(row: sqlite3.Row) -> Article:
         opportunity_evidence=row["opportunity_evidence"],
         opportunity_terms=json.loads(row["opportunity_terms"]),
         brand_label=row["brand_label"],
+        link_verified_by_user=bool(row["link_verified_by_user"]),
     )
 
 
@@ -81,8 +83,8 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
         cursor = conn.execute(
             "INSERT INTO articles (newsletter_id, rubric, brand_id, sector, title, published_at,"
             " source_name, url, excerpt, is_opportunity, selected, position, collected_at,"
-            " body_text, brand_label)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            " body_text, brand_label, link_verified_by_user)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             " ON CONFLICT (newsletter_id, url) DO NOTHING",
             (
                 article.newsletter_id,
@@ -100,6 +102,7 @@ def add(conn: sqlite3.Connection, article: Article) -> Article | None:
                 to_iso_datetime(article.collected_at),
                 article.body_text,
                 article.brand_label,
+                int(article.link_verified_by_user),
             ),
         )
         if cursor.rowcount == 0:
@@ -212,6 +215,34 @@ def list_for_newsletter(conn: sqlite3.Connection, newsletter_id: int) -> list[Ar
         (newsletter_id,),
     )
     return [_from_row(row) for row in rows]
+
+
+def move_to_rubric(
+    conn: sqlite3.Connection,
+    article_id: int,
+    rubric: int,
+    brand_id: int | None,
+    brand_label: str | None,
+    sector: str | None,
+) -> Article:
+    """Déplace un article dans l'autre rubrique, en fin de liste, avec son enseigne.
+
+    Les autres champs (lien, sélection, texte) sont conservés. LookupError si absent.
+    """
+    _check_rubric(rubric)
+    article = get(conn, article_id)
+    if article is None:
+        raise LookupError(f"Article introuvable (id {article_id}).")
+    with transaction(conn):
+        position = _common.next_position(conn, "articles", _SCOPE, (article.newsletter_id, rubric))
+        conn.execute(
+            "UPDATE articles SET rubric = ?, brand_id = ?, brand_label = ?, sector = ?,"
+            " position = ? WHERE id = ?",
+            (rubric, brand_id, brand_label, sector, position, article_id),
+        )
+    moved = get(conn, article_id)
+    assert moved is not None
+    return moved
 
 
 def set_selected(conn: sqlite3.Connection, article_id: int, selected: bool) -> None:

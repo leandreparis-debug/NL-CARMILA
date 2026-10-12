@@ -165,26 +165,46 @@ Une fois la veille collectée, la relecture permet en quelques minutes de choisi
    - *Rubrique 2 — Nos enseignes* ;
    - *Rubrique 5 — Franchisés identifiés*.
 
-   Chaque onglet affiche un compteur « retenus / limite ». Il passe **en orange** quand la limite est dépassée : c'est un simple avertissement, rien n'est bloqué. Un rappel indique que la version imprimée doit tenir en 4 pages A4.
-3. **Filtres** : *Tout*, *Retenus*, *Non retenus*, *Opportunités* (pour les franchisés : *Tout*, *Validés*, *À valider*).
-4. **Pour chaque article** (une carte) :
-   - **Retenir / Ne plus retenir** : garde l'article dans la newsletter ou l'en retire (il reste visible, en grisé) ;
-   - **↑ Monter / ↓ Descendre** : change sa place dans la rubrique ;
-   - **Supprimer…** : demande une confirmation, puis efface l'article. Pour l'écarter simplement, préférez « Ne plus retenir » ;
-   - **Ouvrir l'article ↗** : ouvre l'article d'origine dans un nouvel onglet ;
-   - les champs **Titre, Enseigne** (les 15 enseignes ou « Autre… » avec un nom libre), **Secteur, Date, Source** et **Premières lignes** se corrigent puis s'enregistrent avec **Enregistrer cet article**. Les premières lignes peuvent être coupées ou corrigées, **pas réécrites** : elles doivent rester fidèles à l'article ;
-   - la case **Opportunité** marque les articles où l'enseigne cherche des emplacements. Si le repère a été posé automatiquement, la phrase qui l'a déclenché est affichée. Une fois modifié à la main, il n'est plus jamais changé par la détection ;
-   - **le lien de l'article n'est pas modifiable** : on peut retirer un article, pas changer son lien.
-5. **Ne retenir que les N premiers** (N = limite de la rubrique) : retient les N premiers articles, dans l'ordre affiché, et retire les suivants. Pratique après avoir mis les meilleurs en haut.
-6. **+ Ajouter un article à la main** : collez le lien d'un article trouvé vous-même, puis **Vérifier le lien**. L'application vérifie qu'il fonctionne, lit son titre et ses premières lignes, puis vous complétez le reste avant d'enregistrer. Un lien qui ne répond pas est refusé avec un message.
-7. **Onglet Franchisés** : chaque fiche (nom, enseigne(s), ville ou région, nombre de points de vente, source, niveau de confiance) montre la phrase de l'article qui l'a fait détecter.
-   - **Valider** la garde dans la newsletter.
-   - Toute correction (**Enregistrer ce franchisé**) est définitive : la détection n'y touchera plus.
-   - **Supprimer…** écarte une suggestion, qui ne sera plus reproposée.
-   - **+ Ajouter un franchisé à la main** exige le lien de l'article source, qui est vérifié.
-8. **Marquer comme relue** (en haut à droite) passe la newsletter au statut « Relue ». Des avertissements s'affichent si une rubrique dépasse sa limite ou si aucun franchisé n'est validé, mais rien n'est bloqué. **Repasser en brouillon** permet de revenir en arrière.
+   Chaque onglet affiche un compteur « retenus / limite ». Il passe **en orange** quand la limite est dépassée : c'est un avertissement, rien n'est bloqué. Un rappel indique que la version imprimée doit tenir en 4 pages A4.
+3. **Filtres** :
+   - articles : *Tout*, *Retenus*, *Non retenus*, *Opportunités* ;
+   - franchisés : *Tout*, *Validés*, *À valider*, *Écartés*.
+4. **Vue compacte.** Chaque article tient sur une ligne : rang, bouton **Retenir**, enseigne, titre, source, date, badge « Opportunité ».
+   - **Modifier** déplie le formulaire complet de l'article.
+   - **Tout déplier / Tout replier** ouvre ou ferme tous les formulaires.
+5. **Retenir.** Un seul bouton, sur la ligne de l'article :
+   - **Retenir** pour garder l'article dans la newsletter ;
+   - **✓ Retenu — ne plus retenir** pour l'en retirer (il reste visible, en grisé).
+6. **Ordonner** :
+   - **⤒ En tête**, **↑ Monter**, **↓ Descendre**, **⤓ En fin** ;
+   - ou tapez un numéro dans **Rang**, puis **Placer**. Un numéro trop grand place l'article en dernier.
+   - **Ne retenir que les N premiers** (N = limite de la rubrique) retient les N premiers articles dans l'ordre affiché et retire les suivants.
+7. **Corriger** (dans **Modifier**) :
+   - **Titre** ;
+   - **Enseigne** (les 15 enseignes, ou « Autre… » avec un nom libre) ;
+   - **Secteur**, **Date**, **Source** ;
+   - **Premières lignes** : elles peuvent être coupées ou corrigées, **pas réécrites**, elles doivent rester fidèles à l'article ;
+   - la case **Opportunité**, puis **Enregistrer cet article**.
 
-Après chaque action, un message confirme ce qui a été fait (ou explique pourquoi c'est refusé) et la page revient sur l'élément concerné. Tout fonctionne sans JavaScript et au clavier (touche Tab ; un lien « Aller au contenu » apparaît en premier).
+   Si le repère « opportunité » a été posé automatiquement, la phrase qui l'a déclenché est affichée. Une fois modifié à la main, la détection n'y touche plus. **Le lien de l'article n'est pas modifiable.**
+8. **Rien ne se perd.**
+   - Une carte modifiée et pas encore enregistrée affiche « Modifications non enregistrées ».
+   - Quitter la page ou changer d'onglet à ce moment-là fait apparaître une demande de confirmation du navigateur.
+   - Si un enregistrement est refusé (titre vide, date impossible…), la page revient avec **toute votre saisie** et le message à côté du champ à corriger.
+9. **Changer de rubrique** (dans **Modifier**) : **Déplacer vers la rubrique 2** (l'enseigne est alors obligatoire) ou **vers la rubrique 1**. L'article se place en fin de la rubrique choisie.
+10. **Supprimer…** demande une confirmation, puis efface l'article. Pour l'écarter simplement, préférez « Ne plus retenir ».
+11. **+ Ajouter un article à la main** : collez le lien d'un article trouvé vous-même, puis **Vérifier le lien**. L'application lit le titre et les premières lignes, vous complétez le reste, puis vous enregistrez.
+    - Un lien qui ne répond pas, ou qui ne commence pas par http(s), est refusé.
+    - Si le site **refuse la lecture automatique** (protection anti-robot) : ouvrez le lien dans votre navigateur, saisissez titre et premières lignes, puis cochez **« J'ai ouvert ce lien dans mon navigateur et il affiche bien l'article »**. L'article porte alors la mention **« Lien vérifié par l'utilisateur »**.
+12. **Onglet Franchisés.** Chaque fiche montre le nom, l'enseigne, le lieu, le nombre de points de vente, la source et l'**extrait qui justifie la détection**.
+    - **Fiche complète / partielle / incomplète** indique les informations trouvées dans l'article, **pas** la fiabilité de la détection : vérifiez toujours l'extrait.
+    - **Valider** garde la fiche dans la newsletter.
+    - Toute correction (**Modifier**, puis **Enregistrer ce franchisé**) est définitive : la détection n'y touchera plus.
+    - **Supprimer…** écarte une suggestion : elle n'est plus reproposée. Elle se retrouve dans le filtre **Écartés**, où **Restaurer** la remet en suggestion à valider. Une fiche saisie à la main est, elle, supprimée définitivement.
+    - **+ Ajouter un franchisé à la main** exige le lien de l'article source, qui est vérifié.
+13. **Marquer comme relue** (en haut à droite) passe la newsletter au statut « Relue ». Des avertissements s'affichent si une rubrique dépasse sa limite ou si aucun franchisé n'est validé. **Repasser en brouillon** permet de revenir en arrière.
+
+Après chaque action, un message confirme ce qui a été fait, ou explique pourquoi c'est refusé, et la page revient sur l'élément concerné. Tout fonctionne sans JavaScript et au clavier : touche Tab, avec un lien « Aller au contenu » en premier.
 
 ### Limites par rubrique
 

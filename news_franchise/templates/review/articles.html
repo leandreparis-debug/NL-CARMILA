@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "review/_macros.html" import val, checked, invalid, error %}
 {% block title %}Relecture {{ month_label }} — News Franchise{% endblock %}
 {% block content %}
   {% set counted_label = "retenus" %}
@@ -21,90 +22,126 @@
 
   {% for a in items %}
     {% set p = "a" ~ a.id %}
+    {% set editing = edit and edit.item_id == a.id %}
     <article class="card{% if not a.selected %} card-off{% endif %}" id="article-{{ a.id }}">
-      <div class="card-head">
-        <span class="card-pos" title="Position">{{ positions[a.id] + 1 }}</span>
-        <h2 class="card-title">{{ a.title }}</h2>
-        <span class="badge {% if a.selected %}badge-on{% else %}badge-off{% endif %}">{% if a.selected %}Retenu{% else %}Non retenu{% endif %}</span>
-        {% if a.is_opportunity %}<span class="badge badge-opp">Opportunité</span>{% endif %}
-      </div>
-
-      <div class="card-actions">
+      <div class="card-line">
+        <span class="card-pos" title="Rang">{{ positions[a.id] + 1 }}</span>
         <form method="post" action="{{ url_for('review.toggle_article', month=newsletter.month, article_id=a.id) }}" class="inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="filtre" value="{{ filtre }}">
           {% if a.selected %}
-            <button type="submit" name="valeur" value="0" class="btn btn-small">Ne plus retenir</button>
+            <button type="submit" name="valeur" value="0" class="btn btn-small btn-kept" title="Cliquer pour ne plus retenir cet article">✓ Retenu — ne plus retenir</button>
           {% else %}
             <button type="submit" name="valeur" value="1" class="btn btn-small btn-primary">Retenir</button>
           {% endif %}
         </form>
-        {% with action=url_for('review.move_article', month=newsletter.month, article_id=a.id), position=positions[a.id] %}
+        <span class="line-brand">{{ brand_names.get(a.brand_id) or a.brand_label or "—" }}</span>
+        <h2 class="card-title">{{ a.title }}</h2>
+        <span class="line-meta">{{ a.source_name }}{% if a.published_at %} · {{ date_value(a)[8:10] }}/{{ date_value(a)[5:7] }}/{{ date_value(a)[0:4] }}{% endif %}</span>
+        {% if a.is_opportunity %}<span class="badge badge-opp">Opportunité</span>{% endif %}
+        {% if a.link_verified_by_user %}<span class="badge badge-user" title="Le site refuse la lecture automatique : le lien a été vérifié à la main.">Lien vérifié par l'utilisateur</span>{% endif %}
+        <span class="badge badge-unsaved" {% if not editing %}hidden{% endif %}>Modifications non enregistrées</span>
+        <a class="article-link" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">Ouvrir ↗<span class="sr-only"> l'article (nouvel onglet)</span></a>
+      </div>
+
+      <div class="card-actions">
+        {% with action=url_for('review.move_article', month=newsletter.month, article_id=a.id), position=positions[a.id], label="l'article", rank_id=p ~ "-rang" %}
           {% include "review/_move.html" %}
         {% endwith %}
         <a class="btn btn-small btn-danger" href="{{ url_for('review.delete_article', month=newsletter.month, article_id=a.id) }}">Supprimer…</a>
-        <a class="article-link" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l'article ↗<span class="sr-only"> (nouvel onglet)</span></a>
       </div>
 
-      <form method="post" action="{{ url_for('review.save_article', month=newsletter.month, article_id=a.id) }}" class="card-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="filtre" value="{{ filtre }}">
-        <div class="row">
-          <label class="check"><input type="checkbox" name="retenir" {% if a.selected %}checked{% endif %}> Retenir</label>
-          <label class="check"><input type="checkbox" name="opportunite" {% if a.is_opportunity %}checked{% endif %}>
+      <details class="card-details" {% if unfold_all or editing %}open{% endif %}>
+        <summary>Modifier</summary>
+        {% if editing and edit.errors.get("general") %}<p class="field-error" role="alert">{{ edit.errors.general }}</p>{% endif %}
+        <form method="post" action="{{ url_for('review.save_article', month=newsletter.month, article_id=a.id) }}" class="card-form" {% if editing %}data-dirty="1"{% endif %}>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="filtre" value="{{ filtre }}">
+          <label class="check"><input type="checkbox" name="opportunite" {{ checked(edit, a.id, "opportunite", a.is_opportunity) }}>
             Opportunité (l'enseigne cherche des emplacements)</label>
-        </div>
-        {% if a.opportunity_source == "auto" and a.opportunity_evidence %}
-          <p class="evidence">Repère détecté automatiquement d'après la phrase : <q>{{ a.opportunity_evidence }}</q>
-            {% if a.opportunity_terms %}<small>(termes : {{ a.opportunity_terms|join(", ") }})</small>{% endif %}</p>
-        {% elif a.opportunity_source == "manual" %}
-          <p class="evidence">Repère « opportunité » réglé à la main : la détection automatique ne le modifiera plus.</p>
-        {% endif %}
+          {% if a.opportunity_source == "auto" and a.opportunity_evidence %}
+            <p class="evidence">Repère détecté automatiquement d'après la phrase : <q>{{ a.opportunity_evidence }}</q>
+              {% if a.opportunity_terms %}<small>(termes : {{ a.opportunity_terms|join(", ") }})</small>{% endif %}</p>
+          {% elif a.opportunity_source == "manual" %}
+            <p class="evidence">Repère « opportunité » réglé à la main : la détection automatique ne le modifiera plus.</p>
+          {% endif %}
 
-        <div class="grid">
-          <div class="field field-wide">
-            <label for="{{ p }}-titre">Titre</label>
-            <input type="text" id="{{ p }}-titre" name="titre" value="{{ a.title }}" maxlength="300" required>
+          <div class="grid">
+            <div class="field field-wide">
+              <label for="{{ p }}-titre">Titre</label>
+              <input type="text" id="{{ p }}-titre" name="titre" value="{{ val(edit, a.id, 'titre', a.title) }}" maxlength="300" required {{ invalid(edit, a.id, 'titre', p ~ '-titre-err') }}>
+              {{ error(edit, a.id, "titre", p ~ "-titre-err") }}
+            </div>
+            {% set brand_value = val(edit, a.id, "enseigne", a.brand_id if a.brand_id else (other_brand if a.brand_label else "")) %}
+            <div class="field">
+              <label for="{{ p }}-enseigne">Enseigne</label>
+              <select id="{{ p }}-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-autre-field" {{ invalid(edit, a.id, 'enseigne', p ~ '-enseigne-err') }}>
+                <option value="" {% if not brand_value %}selected{% endif %}>— Aucune —</option>
+                {% for b in brand_list %}
+                  <option value="{{ b.id }}" {% if brand_value == b.id|string %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+                <option value="{{ other_brand }}" {% if brand_value == other_brand %}selected{% endif %}>Autre…</option>
+              </select>
+              {{ error(edit, a.id, "enseigne", p ~ "-enseigne-err") }}
+            </div>
+            <div class="field" id="{{ p }}-autre-field">
+              <label for="{{ p }}-autre">Autre enseigne</label>
+              <input type="text" id="{{ p }}-autre" name="enseigne_autre" value="{{ val(edit, a.id, 'enseigne_autre', a.brand_label) }}" maxlength="100" {{ invalid(edit, a.id, 'enseigne_autre', p ~ '-autre-err') }}>
+              {{ error(edit, a.id, "enseigne_autre", p ~ "-autre-err") }}
+            </div>
+            <div class="field">
+              <label for="{{ p }}-secteur">Secteur</label>
+              <input type="text" id="{{ p }}-secteur" name="secteur" value="{{ val(edit, a.id, 'secteur', a.sector) }}" maxlength="80" {{ invalid(edit, a.id, 'secteur', p ~ '-secteur-err') }}>
+              {{ error(edit, a.id, "secteur", p ~ "-secteur-err") }}
+            </div>
+            <div class="field">
+              <label for="{{ p }}-date">Date</label>
+              <input type="date" id="{{ p }}-date" name="date" value="{{ val(edit, a.id, 'date', date_value(a)) }}" {{ invalid(edit, a.id, 'date', p ~ '-date-err') }}>
+              {{ error(edit, a.id, "date", p ~ "-date-err") }}
+            </div>
+            <div class="field">
+              <label for="{{ p }}-source">Source</label>
+              <input type="text" id="{{ p }}-source" name="source" value="{{ val(edit, a.id, 'source', a.source_name) }}" maxlength="120" required {{ invalid(edit, a.id, 'source', p ~ '-source-err') }}>
+              {{ error(edit, a.id, "source", p ~ "-source-err") }}
+            </div>
+            <div class="field field-wide">
+              <label for="{{ p }}-extrait">Premières lignes</label>
+              <textarea id="{{ p }}-extrait" name="extrait" rows="4" maxlength="1000" aria-describedby="{{ p }}-aide">{{ val(edit, a.id, 'extrait', a.excerpt) }}</textarea>
+              {{ error(edit, a.id, "extrait", p ~ "-extrait-err") }}
+              <p class="help" id="{{ p }}-aide">Vous pouvez couper ce texte ou corriger une faute, mais pas le réécrire :
+                il doit rester fidèle à ce que dit l'article.</p>
+            </div>
+            <div class="field field-wide">
+              <span class="label">Lien de l'article (non modifiable)</span>
+              <a class="url" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.url }}</a>
+            </div>
           </div>
-          <div class="field">
-            <label for="{{ p }}-enseigne">Enseigne</label>
-            <select id="{{ p }}-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-autre-field">
-              <option value="" {% if not a.brand_id and not a.brand_label %}selected{% endif %}>— Aucune —</option>
-              {% for b in brand_list %}
-                <option value="{{ b.id }}" {% if a.brand_id == b.id %}selected{% endif %}>{{ b.name }}</option>
-              {% endfor %}
+          <button type="submit" class="btn btn-primary">Enregistrer cet article</button>
+        </form>
+
+        <form method="post" action="{{ url_for('review.change_rubric', month=newsletter.month, article_id=a.id) }}" class="move-rubric">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="filtre" value="{{ filtre }}">
+          <input type="hidden" name="cible" value="{{ other_rubric }}">
+          {% if other_rubric == 2 %}
+            <span class="label">Déplacer vers la rubrique 2 — Nos enseignes (choisissez l'enseigne) :</span>
+            <label for="{{ p }}-cible-enseigne" class="sr-only">Enseigne pour la rubrique 2</label>
+            <select id="{{ p }}-cible-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-cible-autre-field">
+              <option value="">— Choisir l'enseigne —</option>
+              {% for b in brand_list %}<option value="{{ b.id }}" {% if a.brand_id == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
               <option value="{{ other_brand }}" {% if a.brand_label %}selected{% endif %}>Autre…</option>
             </select>
-          </div>
-          <div class="field" id="{{ p }}-autre-field">
-            <label for="{{ p }}-autre">Autre enseigne</label>
-            <input type="text" id="{{ p }}-autre" name="enseigne_autre" value="{{ a.brand_label or '' }}" maxlength="100">
-          </div>
-          <div class="field">
-            <label for="{{ p }}-secteur">Secteur</label>
-            <input type="text" id="{{ p }}-secteur" name="secteur" value="{{ a.sector or '' }}" maxlength="80">
-          </div>
-          <div class="field">
-            <label for="{{ p }}-date">Date</label>
-            <input type="date" id="{{ p }}-date" name="date" value="{{ date_value(a) }}">
-          </div>
-          <div class="field">
-            <label for="{{ p }}-source">Source</label>
-            <input type="text" id="{{ p }}-source" name="source" value="{{ a.source_name }}" maxlength="120" required>
-          </div>
-          <div class="field field-wide">
-            <label for="{{ p }}-extrait">Premières lignes</label>
-            <textarea id="{{ p }}-extrait" name="extrait" rows="4" maxlength="1000" aria-describedby="{{ p }}-aide">{{ a.excerpt or '' }}</textarea>
-            <p class="help" id="{{ p }}-aide">Vous pouvez couper ce texte ou corriger une faute, mais pas le réécrire :
-              il doit rester fidèle à ce que dit l'article.</p>
-          </div>
-          <div class="field field-wide">
-            <span class="label">Lien de l'article (non modifiable)</span>
-            <a class="url" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.url }}</a>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Enregistrer cet article</button>
-      </form>
+            <span id="{{ p }}-cible-autre-field">
+              <label for="{{ p }}-cible-autre">Autre enseigne</label>
+              <input type="text" id="{{ p }}-cible-autre" name="enseigne_autre" value="{{ a.brand_label or '' }}" maxlength="100">
+            </span>
+            <button type="submit" class="btn btn-small">Déplacer vers la rubrique 2</button>
+          {% else %}
+            <span class="label">Cet article ne concerne pas une de nos enseignes ?</span>
+            <button type="submit" class="btn btn-small">Déplacer vers la rubrique 1 — Marché de la franchise</button>
+          {% endif %}
+        </form>
+      </details>
     </article>
   {% endfor %}
 {% endblock %}

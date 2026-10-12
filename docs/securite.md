@@ -27,7 +27,10 @@ Les liens vers les articles s'ouvrent dans un nouvel onglet avec `rel="noopener 
 
 - L'URL d'un article collecté n'est **pas modifiable** : le formulaire de relecture ne la lit jamais, même si un champ « url » est ajouté à la requête.
 - Il en va de même pour la source d'un franchisé.
-- Un lien ajouté à la main (article ou source d'un franchisé) n'est enregistré qu'après vérification : il doit répondre (code 2xx après redirections) au moment de l'enregistrement, et `robots.txt` est respecté.
+- Un lien ajouté à la main (article ou source d'un franchisé) n'est enregistré qu'après vérification : il doit répondre (code 2xx après redirections) au moment de l'enregistrement.
+- **Exception `robots.txt` pour les ajouts manuels.** La collecte automatique respecte toujours `robots.txt`. Mais un lien ajouté à la main est une demande explicite de l'utilisateur : l'application lit alors cette seule page, comme le ferait son navigateur, sans consulter `robots.txt`.
+- **« Lien vérifié par l'utilisateur ».** Si le site refuse quand même la lecture automatique (réponse 401, 403, 406, 429 ou 503, typique des protections anti-robot), l'article ne peut être enregistré que si l'utilisateur coche « J'ai ouvert ce lien dans mon navigateur et il affiche bien l'article ». Il saisit alors lui-même le titre et les premières lignes. L'article est marqué en base (`articles.link_verified_by_user = 1`) et la mention est visible sur sa carte. Pour la source d'un franchisé, un tel refus reste bloquant.
+- Ces exceptions ne s'appliquent jamais à une adresse qui ne commence pas par `http://` ou `https://`, ni à un lien qui ne répond pas (introuvable, erreur réseau) : ils sont toujours refusés.
 - Toute URL stockée commence par `http://` ou `https://` : contrôle en Python et contrainte `CHECK` en base.
 
 ## Saisies

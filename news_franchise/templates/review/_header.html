@@ -35,10 +35,18 @@
   <p class="muted">Rappel : la version imprimée doit tenir en {{ limits.pages_max }} pages A4.</p>
 </div>
 
-<nav class="filters" aria-label="Filtres">
-  {% for key, label in filters.items() %}
-    <a href="{{ url_for('review.month', month=newsletter.month, tab=tab, filtre=key if key != 'tous' else None) }}"
-       class="filter{% if key == filtre %} filter-active{% endif %}"
-       {% if key == filtre %}aria-current="true"{% endif %}>{{ label }}</a>
-  {% endfor %}
-</nav>
+<div class="filters-bar">
+  <nav class="filters" aria-label="Filtres">
+    {% for key, label in filters.items() %}
+      <a href="{{ url_for('review.month', month=newsletter.month, tab=tab, filtre=key if key != 'tous' else None) }}"
+         class="filter{% if key == filtre %} filter-active{% endif %}"
+         {% if key == filtre %}aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  {% set keep_filter = filtre if filtre != 'tous' else None %}
+  {% if unfold_all %}
+    <a class="unfold-all" data-unfold="0" href="{{ url_for('review.month', month=newsletter.month, tab=tab, filtre=keep_filter) }}">Tout replier</a>
+  {% else %}
+    <a class="unfold-all" data-unfold="1" href="{{ url_for('review.month', month=newsletter.month, tab=tab, filtre=keep_filter, deplier=1) }}">Tout déplier</a>
+  {% endif %}
+</div>

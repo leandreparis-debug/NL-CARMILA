@@ -10,9 +10,9 @@
     <table class="figures">
       <tr><th>Opportunités détectées</th><td>{{ report.opportunities|length }}</td></tr>
       <tr><th>Repères « opportunité » modifiés à la main (conservés)</th><td>{{ report.protected_opportunities }}</td></tr>
-      <tr><th>Franchisés candidats, confiance haute</th><td>{{ by_conf['haute'] }}</td></tr>
-      <tr><th>Franchisés candidats, confiance moyenne</th><td>{{ by_conf['moyenne'] }}</td></tr>
-      <tr><th>Franchisés candidats, confiance basse</th><td>{{ by_conf['basse'] }}</td></tr>
+      <tr><th>Franchisés candidats, fiches complètes</th><td>{{ by_conf['haute'] }}</td></tr>
+      <tr><th>Franchisés candidats, fiches partielles</th><td>{{ by_conf['moyenne'] }}</td></tr>
+      <tr><th>Franchisés candidats, fiches incomplètes</th><td>{{ by_conf['basse'] }}</td></tr>
       <tr><th>Phrases déclencheuses sans nom (pas de fiche)</th><td>{{ report.unnamed|length }}</td></tr>
       <tr><th>Fiches validées ou modifiées à la main (conservées)</th><td>{{ report.protected_franchisees }}</td></tr>
     </table>
@@ -37,7 +37,7 @@
           <li><strong>{{ c.name }}</strong> — {{ c.brands|join(", ") or "enseigne inconnue" }}
             — {{ c.location or "lieu inconnu" }}
             — {% if c.store_count is not none %}{{ c.store_count }} point(s) de vente{% else %}nombre inconnu{% endif %}
-            (confiance {{ c.confidence }})<br>
+            ({{ {"haute": "fiche complète", "moyenne": "fiche partielle", "basse": "fiche incomplète"}[c.confidence] }})<br>
             <q>{{ c.evidence }}</q><br>
             <small>Source : <a href="{{ finding.article.url }}" target="_blank" rel="noopener noreferrer">{{ finding.article.source_name }}</a></small></li>
         {% endfor %}

@@ -1,77 +1,106 @@
 {% extends "base.html" %}
+{% from "review/_macros.html" import val, invalid, error %}
 {% block title %}Franchisés {{ month_label }} — News Franchise{% endblock %}
 {% block content %}
   {% set counted_label = "validés" %}
   {% include "review/_header.html" %}
 
   <p class="help">Les franchisés trouvés par la détection sont des <strong>suggestions</strong> :
-    vérifiez la phrase et la source, puis cochez « Valider » pour les garder dans la newsletter.</p>
+    vérifiez l'extrait et la source, puis cliquez sur « Valider » pour les garder dans la newsletter.</p>
   <div class="toolbar">
     <a class="btn" href="{{ url_for('review.add_franchisee', month=newsletter.month) }}">+ Ajouter un franchisé à la main</a>
   </div>
 
   {% if not items %}
-    <p class="muted">Aucun franchisé {% if filtre != "tous" %}pour ce filtre{% else %}pour ce mois{% endif %}.</p>
+    <p class="muted">
+      {% if filtre == "ecartes" %}Aucun franchisé écarté.
+      {% elif filtre != "tous" %}Aucun franchisé pour ce filtre.
+      {% else %}Aucun franchisé pour ce mois.{% endif %}
+    </p>
   {% endif %}
 
   {% for f in items %}
     {% set p = "f" ~ f.id %}
-    <article class="card{% if not f.validated %} card-off{% endif %}" id="franchise-{{ f.id }}">
-      <div class="card-head">
-        <span class="card-pos" title="Position">{{ positions[f.id] + 1 }}</span>
+    {% set editing = edit and edit.item_id == f.id %}
+    <article class="card{% if not f.validated or f.dismissed %} card-off{% endif %}" id="franchise-{{ f.id }}">
+      <div class="card-line">
+        {% if not f.dismissed %}<span class="card-pos" title="Rang">{{ positions[f.id] + 1 }}</span>{% endif %}
+        {% if f.dismissed %}
+          <form method="post" action="{{ url_for('review.restore_franchisee', month=newsletter.month, franchisee_id=f.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="filtre" value="{{ filtre }}">
+            <button type="submit" class="btn btn-small btn-primary">Restaurer</button>
+          </form>
+          <span class="badge badge-off">Écarté</span>
+        {% else %}
+          <form method="post" action="{{ url_for('review.validate_franchisee', month=newsletter.month, franchisee_id=f.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="filtre" value="{{ filtre }}">
+            {% if f.validated %}
+              <button type="submit" name="valeur" value="0" class="btn btn-small btn-kept" title="Cliquer pour retirer la validation">✓ Validé — retirer la validation</button>
+            {% else %}
+              <button type="submit" name="valeur" value="1" class="btn btn-small btn-primary">Valider</button>
+            {% endif %}
+          </form>
+        {% endif %}
         <h2 class="card-title">{{ f.name }}</h2>
-        <span class="badge {% if f.validated %}badge-on{% else %}badge-off{% endif %}">{% if f.validated %}Validé{% else %}À valider{% endif %}</span>
-        {% if f.confidence %}<span class="badge conf-{{ f.confidence }}">Confiance {{ f.confidence }}</span>
+        <span class="line-meta">{{ f.brands or "enseigne ?" }} · {{ f.location or "lieu ?" }} ·
+          {% if f.store_count is not none %}{{ f.store_count }} point(s) de vente{% else %}nombre ?{% endif %}</span>
+        {% if f.confidence %}
+          <span class="badge conf-{{ f.confidence }}" title="{{ fiche_help }}">{{ fiche_labels[f.confidence] }}
+            <span class="info" aria-hidden="true">?</span><span class="sr-only"> : {{ fiche_help }}</span></span>
         {% else %}<span class="badge">Saisi à la main</span>{% endif %}
-      </div>
-      <div class="card-actions">
-        <form method="post" action="{{ url_for('review.validate_franchisee', month=newsletter.month, franchisee_id=f.id) }}" class="inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="filtre" value="{{ filtre }}">
-          {% if f.validated %}
-            <button type="submit" name="valeur" value="0" class="btn btn-small">Retirer la validation</button>
-          {% else %}
-            <button type="submit" name="valeur" value="1" class="btn btn-small btn-primary">Valider</button>
-          {% endif %}
-        </form>
-        {% with action=url_for('review.move_franchisee', month=newsletter.month, franchisee_id=f.id), position=positions[f.id] %}
-          {% include "review/_move.html" %}
-        {% endwith %}
-        <a class="btn btn-small btn-danger" href="{{ url_for('review.delete_franchisee', month=newsletter.month, franchisee_id=f.id) }}">Supprimer…</a>
+        <span class="badge badge-unsaved" {% if not editing %}hidden{% endif %}>Modifications non enregistrées</span>
       </div>
       {% if f.evidence %}
-        <p class="evidence">Phrase de l'article : <q>{{ f.evidence }}</q></p>
+        <p class="evidence">Extrait qui justifie la détection : <q>{{ f.evidence }}</q></p>
       {% endif %}
-      <form method="post" action="{{ url_for('review.save_franchisee', month=newsletter.month, franchisee_id=f.id) }}" class="card-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="filtre" value="{{ filtre }}">
-        <label class="check"><input type="checkbox" name="valider" {% if f.validated %}checked{% endif %}> Valider</label>
-        <div class="grid">
-          <div class="field">
-            <label for="{{ p }}-nom">Nom</label>
-            <input type="text" id="{{ p }}-nom" name="nom" value="{{ f.name }}" maxlength="150" required>
-          </div>
-          <div class="field">
-            <label for="{{ p }}-enseignes">Enseigne(s)</label>
-            <input type="text" id="{{ p }}-enseignes" name="enseignes" value="{{ f.brands }}" maxlength="200">
-          </div>
-          <div class="field">
-            <label for="{{ p }}-lieu">Ville ou région</label>
-            <input type="text" id="{{ p }}-lieu" name="lieu" value="{{ f.location or '' }}" maxlength="120">
-          </div>
-          <div class="field">
-            <label for="{{ p }}-nombre">Nombre de points de vente</label>
-            <input type="number" id="{{ p }}-nombre" name="nombre" min="0" max="100000" value="{{ f.store_count if f.store_count is not none else '' }}"
-                   aria-describedby="{{ p }}-nombre-aide">
-            <p class="help" id="{{ p }}-nombre-aide">Laissez vide si l'article ne le dit pas.</p>
-          </div>
-          <div class="field field-wide">
-            <span class="label">Source (non modifiable)</span>
-            <a class="url" href="{{ f.source_url }}" target="_blank" rel="noopener noreferrer">{{ f.source_name }} ↗</a>
-          </div>
+      {% if not f.dismissed %}
+        <div class="card-actions">
+          {% with action=url_for('review.move_franchisee', month=newsletter.month, franchisee_id=f.id), position=positions[f.id], label="le franchisé", rank_id=p ~ "-rang" %}
+            {% include "review/_move.html" %}
+          {% endwith %}
+          <a class="btn btn-small btn-danger" href="{{ url_for('review.delete_franchisee', month=newsletter.month, franchisee_id=f.id) }}">Supprimer…</a>
         </div>
-        <button type="submit" class="btn btn-primary">Enregistrer ce franchisé</button>
-      </form>
+        <details class="card-details" {% if unfold_all or editing %}open{% endif %}>
+          <summary>Modifier</summary>
+          <form method="post" action="{{ url_for('review.save_franchisee', month=newsletter.month, franchisee_id=f.id) }}" class="card-form" {% if editing %}data-dirty="1"{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="filtre" value="{{ filtre }}">
+            <div class="grid">
+              <div class="field">
+                <label for="{{ p }}-nom">Nom</label>
+                <input type="text" id="{{ p }}-nom" name="nom" value="{{ val(edit, f.id, 'nom', f.name) }}" maxlength="150" required {{ invalid(edit, f.id, 'nom', p ~ '-nom-err') }}>
+                {{ error(edit, f.id, "nom", p ~ "-nom-err") }}
+              </div>
+              <div class="field">
+                <label for="{{ p }}-enseignes">Enseigne(s)</label>
+                <input type="text" id="{{ p }}-enseignes" name="enseignes" value="{{ val(edit, f.id, 'enseignes', f.brands) }}" maxlength="200" {{ invalid(edit, f.id, 'enseignes', p ~ '-enseignes-err') }}>
+                {{ error(edit, f.id, "enseignes", p ~ "-enseignes-err") }}
+              </div>
+              <div class="field">
+                <label for="{{ p }}-lieu">Ville ou région</label>
+                <input type="text" id="{{ p }}-lieu" name="lieu" value="{{ val(edit, f.id, 'lieu', f.location) }}" maxlength="120" {{ invalid(edit, f.id, 'lieu', p ~ '-lieu-err') }}>
+                {{ error(edit, f.id, "lieu", p ~ "-lieu-err") }}
+              </div>
+              <div class="field">
+                <label for="{{ p }}-nombre">Nombre de points de vente</label>
+                <input type="text" inputmode="numeric" id="{{ p }}-nombre" name="nombre" value="{{ val(edit, f.id, 'nombre', f.store_count) }}"
+                       aria-describedby="{{ p }}-nombre-aide{% if editing and edit.errors.get('nombre') %} {{ p }}-nombre-err{% endif %}"
+                       {% if editing and edit.errors.get('nombre') %}aria-invalid="true"{% endif %}>
+                {{ error(edit, f.id, "nombre", p ~ "-nombre-err") }}
+                <p class="help" id="{{ p }}-nombre-aide">Laissez vide si l'article ne le dit pas.</p>
+              </div>
+              <div class="field field-wide">
+                <span class="label">Source (non modifiable)</span>
+                <a class="url" href="{{ f.source_url }}" target="_blank" rel="noopener noreferrer">{{ f.source_name }} ↗</a>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Enregistrer ce franchisé</button>
+          </form>
+        </details>
+      {% endif %}
     </article>
   {% endfor %}
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='review.js') }}" defer></script>{% endblock %}

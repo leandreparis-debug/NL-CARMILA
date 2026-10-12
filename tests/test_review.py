@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -158,16 +159,84 @@ def test_other_brand_and_validation_errors(
     saved = articles.get(conn, article.id)  # type: ignore[arg-type]
     assert saved is not None and saved.brand_label == "Burger King" and saved.brand_id is None
 
-    for bad, message in [
-        ({**form, "titre": ""}, "« Titre » est obligatoire"),
-        ({**form, "titre": "x" * 301}, "trop long"),
-        ({**form, "date": "2026-02-30"}, "pas une date valide"),
-        ({**form, "enseigne_autre": ""}, "Autre enseigne"),
+    for bad, field, message in [
+        ({**form, "titre": ""}, "titre", "« Titre » est obligatoire"),
+        ({**form, "titre": "x" * 301}, "titre", "trop long"),
+        ({**form, "date": "2026-02-30"}, "date", "pas une date valide"),
+        ({**form, "enseigne_autre": ""}, "autre", "Autre enseigne"),
     ]:
-        post_form(web, f"{BASE}/articles/{article.id}", bad)
-        assert message in _html(web.get(f"{BASE}/rubrique-1"))
+        response = post_form(web, f"{BASE}/articles/{article.id}", bad)
+        html = _html(response)
+        assert response.status_code == 400
+        assert re.search(
+            rf'id="a{article.id}-{field}-err" role="alert">[^<]*{re.escape(message)}', html
+        ), field
     unchanged = articles.get(conn, article.id)  # type: ignore[arg-type]
     assert unchanged is not None and unchanged.title == "Titre"
+
+
+def test_refused_card_keeps_every_typed_value(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    article = _add(conn, newsletter, 1)
+    pokawa = brands.get_by_name(conn, "Pokawa")
+    assert pokawa is not None
+    response = post_form(
+        web,
+        f"{BASE}/articles/{article.id}",
+        {
+            "titre": "",
+            "source": "Source corrigée",
+            "secteur": "Snacking sain",
+            "date": "2026-10-07",
+            "extrait": "Mon extrait raccourci <b>sans balise</b>.",
+            "enseigne": str(pokawa.id),
+            "opportunite": "on",
+        },
+    )
+    html = _html(response)
+    assert response.status_code == 400
+    card = html[html.index(f'id="article-{article.id}"') :]
+    assert 'value="Source corrigée"' in card and 'value="Snacking sain"' in card
+    assert 'value="2026-10-07"' in card
+    assert "Mon extrait raccourci &lt;b&gt;sans balise&lt;/b&gt;." in card
+    assert f'<option value="{pokawa.id}" selected>' in card
+    assert 'name="opportunite" checked' in card
+    assert 'value=""' in card.split(f'id="a{article.id}-titre"')[1][:80]
+    assert "« Titre » est obligatoire" in card
+    assert '<details class="card-details" open>' in card
+    assert '<span class="badge badge-unsaved" >Modifications non enregistrées' in card
+    assert articles.get(conn, article.id).source_name == "Toute la Franchise"  # type: ignore[union-attr, arg-type]
+
+
+def test_card_form_has_no_retain_checkbox(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    article = _add(conn, newsletter, 1)
+    html = _html(web.get(f"{BASE}/rubrique-1"))
+    assert 'name="retenir"' not in html
+    assert "✓ Retenu — ne plus retenir" in html
+    # Envoyer « retenir » au formulaire de carte ne change rien : seul le bouton rapide compte.
+    articles.set_selected(conn, article.id, False)  # type: ignore[arg-type]
+    post_form(web, f"{BASE}/articles/{article.id}", {"titre": "T", "source": "S", "retenir": "on"})
+    assert articles.get(conn, article.id).selected is False  # type: ignore[union-attr, arg-type]
+    post_form(web, f"{BASE}/articles/{article.id}/retenir", {"valeur": "1"})
+    assert articles.get(conn, article.id).selected is True  # type: ignore[union-attr, arg-type]
+
+
+def test_compact_view_and_unfold_all(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    _add(conn, newsletter, 1)
+    html = _html(web.get(f"{BASE}/rubrique-1"))
+    assert '<details class="card-details" >' in html and "<summary>Modifier</summary>" in html
+    assert "Tout déplier" in html
+    unfolded = _html(web.get(f"{BASE}/rubrique-1?deplier=1"))
+    assert '<details class="card-details" open>' in unfolded and "Tout replier" in unfolded
+
+
+def _order(conn: sqlite3.Connection, newsletter: Newsletter, rubric: int = 1) -> list[str]:
+    return [a.title for a in articles.list_for_rubric(conn, newsletter.id, rubric)]  # type: ignore[arg-type]
 
 
 def test_move_and_keep_first(
@@ -184,6 +253,67 @@ def test_move_and_keep_first(
     listed = articles.list_for_rubric(conn, newsletter.id, 1)  # type: ignore[arg-type]
     assert [a.selected for a in listed] == [True] * 6 + [False] * 2
     assert "Seuls les 6 premiers articles sont retenus." in _html(web.get(f"{BASE}/rubrique-1"))
+
+
+def test_place_first_last_and_rank(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    items = [_add(conn, newsletter, i) for i in range(5)]
+    post_form(web, f"{BASE}/articles/{items[4].id}/deplacer", {"sens": "tete"})
+    assert _order(conn, newsletter) == [
+        "Article 4",
+        "Article 0",
+        "Article 1",
+        "Article 2",
+        "Article 3",
+    ]
+    post_form(web, f"{BASE}/articles/{items[4].id}/deplacer", {"sens": "fin"})
+    assert _order(conn, newsletter)[-1] == "Article 4"
+    post_form(web, f"{BASE}/articles/{items[4].id}/deplacer", {"sens": "rang", "rang": "2"})
+    assert _order(conn, newsletter)[1] == "Article 4"
+    post_form(web, f"{BASE}/articles/{items[0].id}/deplacer", {"sens": "rang", "rang": "99"})
+    assert _order(conn, newsletter)[-1] == "Article 0"  # borné à la dernière place
+    post_form(web, f"{BASE}/articles/{items[0].id}/deplacer", {"sens": "rang", "rang": "-4"})
+    assert _order(conn, newsletter)[0] == "Article 0"  # borné à la première place
+    before = _order(conn, newsletter)
+    post_form(web, f"{BASE}/articles/{items[1].id}/deplacer", {"sens": "rang", "rang": "trois"})
+    assert _order(conn, newsletter) == before
+    assert "Le rang doit être un numéro" in _html(web.get(f"{BASE}/rubrique-1"))
+
+
+def test_change_rubric(web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter) -> None:
+    moving = _add(conn, newsletter, 1, title="Article à reclasser")
+    _add(conn, newsletter, 2, rubric=2, title="Déjà en rubrique 2")
+    response = post_form(
+        web, f"{BASE}/articles/{moving.id}/rubrique", {"cible": "2", "enseigne": ""}
+    )
+    assert response.status_code == 302
+    assert articles.get(conn, moving.id).rubric == 1  # type: ignore[union-attr, arg-type]
+    assert "Choisissez l&#39;enseigne" in _html(web.get(f"{BASE}/rubrique-1"))
+
+    wycon = brands.get_by_name(conn, "Wycon")
+    assert wycon is not None
+    post_form(
+        web, f"{BASE}/articles/{moving.id}/rubrique", {"cible": "2", "enseigne": str(wycon.id)}
+    )
+    moved = articles.get(conn, moving.id)  # type: ignore[arg-type]
+    assert moved is not None and moved.rubric == 2 and moved.brand_id == wycon.id
+    assert moved.sector == wycon.sector
+    assert _order(conn, newsletter, 2) == ["Déjà en rubrique 2", "Article à reclasser"]
+    assert "Article déplacé en fin de Rubrique 2" in _html(web.get(f"{BASE}/rubrique-1"))
+
+    post_form(web, f"{BASE}/articles/{moving.id}/rubrique", {"cible": "1"})
+    back = articles.get(conn, moving.id)  # type: ignore[arg-type]
+    assert back is not None and back.rubric == 1 and back.url == moving.url
+    assert back.title == "Article à reclasser" and back.selected and back.brand_id == wycon.id
+
+    post_form(
+        web,
+        f"{BASE}/articles/{moving.id}/rubrique",
+        {"cible": "2", "enseigne": "autre", "enseigne_autre": "Burger King"},
+    )
+    other = articles.get(conn, moving.id)  # type: ignore[arg-type]
+    assert other is not None and other.rubric == 2 and other.brand_label == "Burger King"
 
 
 def test_remove_detected_opportunity_becomes_manual(
@@ -329,7 +459,9 @@ def test_franchisee_validate_edit_delete(
     first = _detected(conn, newsletter, "Jean Dupont")
     second = _detected(conn, newsletter, "Anne Petit")
     html = _html(web.get(f"{BASE}/franchises"))
-    assert "Jean Dupont, multi-franchisé O&#39;Tacos." in html and "Confiance moyenne" in html
+    assert "Extrait qui justifie la détection" in html
+    assert "Jean Dupont, multi-franchisé O&#39;Tacos." in html and "Fiche partielle" in html
+    assert "pas la fiabilité de la détection" in html
     assert "<strong>0 validés</strong> / limite 5" in html
 
     post_form(web, f"{BASE}/franchises/{first.id}/valider", {"valeur": "1"})
@@ -350,8 +482,13 @@ def test_franchisee_validate_edit_delete(
     saved = franchisees.get(conn, first.id)  # type: ignore[arg-type]
     assert saved is not None and saved.edited and saved.location == "Toulouse"
     assert saved.store_count is None and saved.source_url == "https://site.example/articles/source"
-    post_form(web, f"{BASE}/franchises/{first.id}", {"nom": "Jean Dupont", "nombre": "-3"})
-    assert "nombre entier positif" in _html(web.get(f"{BASE}/franchises"))
+    refused = post_form(
+        web, f"{BASE}/franchises/{first.id}", {"nom": "Jean Dupont", "lieu": "Albi", "nombre": "-3"}
+    )
+    html = _html(refused)
+    assert refused.status_code == 400
+    assert f'id="f{first.id}-nombre-err" role="alert">' in html and "nombre entier positif" in html
+    assert 'value="Albi"' in html and 'value="-3"' in html
 
     post_form(web, f"{BASE}/franchises/{second.id}/deplacer", {"sens": "haut"})
     assert [f.id for f in franchisees.list_for_newsletter(conn, newsletter.id)] == [
@@ -520,3 +657,157 @@ def test_demo_dataset(settings: Settings, conn: sqlite3.Connection, web: FlaskCl
     html = _html(web.get("/newsletters/2000-01/rubrique-1"))
     assert "&lt;script&gt;" in html and "<script>alert" not in html
     assert "Jean Exemple" in _html(web.get("/newsletters/2000-01/franchises"))
+
+
+# --------------------------------------------------------------------------- étape 6 bis
+
+ROBOTS_DENY_ALL = httpx.Response(200, text="User-agent: *\nDisallow: /\n")
+
+
+def test_manual_add_ignores_robots_txt(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter, mock_http: respx.MockRouter
+) -> None:
+    routes = serve(
+        mock_http,
+        {
+            "https://journal.example/robots.txt": ROBOTS_DENY_ALL,
+            "https://journal.example/actu/ferme": httpx.Response(200, text=PAGE),
+        },
+    )
+    step2 = post_form(
+        web,
+        f"{BASE}/ajouter-article/verifier",
+        {"lien": "https://journal.example/actu/ferme", "rubrique": "1"},
+    )
+    assert step2.status_code == 200
+    assert 'value="Une enseigne recrute ses franchisés"' in _html(step2)
+    assert routes["https://journal.example/robots.txt"].call_count == 0
+    saved = post_form(
+        web,
+        f"{BASE}/ajouter-article/enregistrer",
+        {
+            "lien": "https://journal.example/actu/ferme",
+            "rubrique": "1",
+            "titre": "Une enseigne recrute",
+            "source": "Le Journal Exemple",
+        },
+    )
+    assert saved.status_code == 302
+    [added] = articles.list_for_newsletter(conn, newsletter.id)  # type: ignore[arg-type]
+    assert added.link_verified_by_user is False
+
+
+def test_manual_add_site_refusing_robots_needs_confirmation(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter, mock_http: respx.MockRouter
+) -> None:
+    link = "https://protege.example/article-42"
+    serve(mock_http, {link: httpx.Response(403, text="Accès refusé aux robots")})
+
+    step2 = post_form(web, f"{BASE}/ajouter-article/verifier", {"lien": link, "rubrique": "2"})
+    html = _html(step2)
+    assert step2.status_code == 200
+    assert "Le site refuse la lecture automatique" in html
+    assert "J'ai ouvert ce lien dans mon navigateur et il affiche bien l'article" in html
+    assert 'name="confirme"' in html
+
+    pokawa = brands.get_by_name(conn, "Pokawa")
+    assert pokawa is not None
+    form = {
+        "lien": link,
+        "rubrique": "2",
+        "titre": "Pokawa ouvre à Nantes",
+        "source": "Le Média Protégé",
+        "extrait": "Pokawa ouvre un restaurant à Nantes.",
+        "enseigne": str(pokawa.id),
+    }
+    refused = post_form(web, f"{BASE}/ajouter-article/enregistrer", form)
+    assert refused.status_code == 400
+    assert 'id="confirme-err"' in _html(refused)
+    assert 'value="Pokawa ouvre à Nantes"' in _html(refused)  # saisie conservée
+    assert articles.list_for_newsletter(conn, newsletter.id) == []  # type: ignore[arg-type]
+
+    no_title = post_form(
+        web, f"{BASE}/ajouter-article/enregistrer", {**form, "titre": "", "confirme": "on"}
+    )
+    assert no_title.status_code == 400 and 'id="titre-err"' in _html(no_title)
+
+    ok = post_form(web, f"{BASE}/ajouter-article/enregistrer", {**form, "confirme": "on"})
+    assert ok.status_code == 302
+    [added] = articles.list_for_newsletter(conn, newsletter.id)  # type: ignore[arg-type]
+    assert added.link_verified_by_user is True and added.url == link
+    assert added.rubric == 2 and added.brand_id == pokawa.id and added.body_text is None
+    assert added.title == "Pokawa ouvre à Nantes" and added.selected
+    assert "Lien vérifié par l'utilisateur</span>" in _html(web.get(f"{BASE}/rubrique-2"))
+
+
+def test_manual_add_still_refuses_non_http_and_dead_links(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter, mock_http: respx.MockRouter
+) -> None:
+    serve(mock_http, {})
+    for link in ("javascript:alert(1)", "file:///C:/secret.txt", "https://journal.example/absent"):
+        response = post_form(
+            web,
+            f"{BASE}/ajouter-article/enregistrer",
+            {"lien": link, "titre": "T", "source": "S", "confirme": "on"},
+        )
+        assert response.status_code == 400, link
+    assert articles.list_for_newsletter(conn, newsletter.id) == []  # type: ignore[arg-type]
+
+
+def test_dismissed_franchisee_filter_and_restore(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    from news_franchise.detect.runner import run_detection
+
+    assert newsletter.id is not None
+    articles.add(
+        conn,
+        Article(
+            newsletter_id=newsletter.id,
+            rubric=1,
+            title="Portrait",
+            source_name="Source",
+            url="https://site.example/portrait",
+            body_text="Jean Dupont, multi-franchisé O'Tacos à la tête de cinq restaurants à Lyon.",
+        ),
+    )
+    run_detection(conn, "2026-10")
+    [fiche] = franchisees.list_for_newsletter(conn, newsletter.id)
+    assert "Fiche complète" in _html(web.get(f"{BASE}/franchises"))
+
+    post_form(web, f"{BASE}/franchises/{fiche.id}/supprimer", {})
+    assert f'id="franchise-{fiche.id}"' not in _html(web.get(f"{BASE}/franchises"))
+    run_detection(conn, "2026-10")  # écarté : jamais reproposé
+    assert franchisees.list_for_newsletter(conn, newsletter.id) == []
+    dismissed = _html(web.get(f"{BASE}/franchises?filtre=ecartes"))
+    assert f'id="franchise-{fiche.id}"' in dismissed and "Restaurer" in dismissed
+
+    post_form(web, f"{BASE}/franchises/{fiche.id}/restaurer", {"filtre": "ecartes"})
+    restored = franchisees.get(conn, fiche.id)  # type: ignore[arg-type]
+    assert restored is not None and not restored.dismissed and not restored.validated
+    assert f'id="franchise-{fiche.id}"' in _html(web.get(f"{BASE}/franchises"))
+    assert post_form(web, f"{BASE}/franchises/{fiche.id}/restaurer", {}).status_code == 404
+
+
+def test_fiche_labels(web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter) -> None:
+    for name, level in (("A Un", "haute"), ("B Deux", "moyenne"), ("C Trois", "basse")):
+        fiche = _detected(conn, newsletter, name)
+        conn.execute("UPDATE franchisees SET confidence = ? WHERE id = ?", (level, fiche.id))
+    html = _html(web.get(f"{BASE}/franchises"))
+    for label in ("Fiche complète", "Fiche partielle", "Fiche incomplète"):
+        assert label in html
+    assert "Confiance" not in html and "Phrase de l&#39;article" not in html
+
+
+def test_security_unchanged_on_new_routes(
+    web: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    article = _add(conn, newsletter, 1)
+    assert (
+        web.post(f"{BASE}/articles/{article.id}/rubrique", data={"cible": "2"}).status_code == 400
+    )
+    assert (
+        web.post(f"{BASE}/articles/{article.id}/deplacer", data={"sens": "tete"}).status_code == 400
+    )
+    response = web.get(f"{BASE}/rubrique-1", headers={"Host": "evil.example:5000"})
+    assert response.status_code == 400

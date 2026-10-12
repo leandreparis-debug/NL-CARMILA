@@ -164,6 +164,9 @@ class Article:
     url: str
     brand_id: int | None = None
     brand_label: str | None = None  # enseigne « Autre » saisie à la main (hors brands)
+    # Ajout manuel d'un lien que le site refuse de laisser lire automatiquement :
+    # l'utilisateur a confirmé l'avoir ouvert dans son navigateur.
+    link_verified_by_user: bool = False
     sector: str | None = None
     published_at: datetime | None = None
     excerpt: str | None = None

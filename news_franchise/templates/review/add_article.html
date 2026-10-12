@@ -23,7 +23,17 @@
       <button type="submit" class="btn btn-primary">Vérifier le lien</button>
     </form>
   {% else %}
-    <p>Le lien fonctionne. Vérifiez et complétez les informations, puis enregistrez.</p>
+    {% if refused %}
+      <div class="alert info" role="status">
+        <p><strong>{{ refused }}</strong></p>
+        <p>Ouvrez le lien dans votre navigateur. S'il affiche bien l'article, saisissez son titre et
+          ses premières lignes ci-dessous, puis cochez la case de confirmation. L'article sera marqué
+          « lien vérifié par l'utilisateur ».</p>
+        <p><a href="{{ form.lien }}" target="_blank" rel="noopener noreferrer">Ouvrir le lien dans un nouvel onglet ↗</a></p>
+      </div>
+    {% else %}
+      <p>Le lien fonctionne. Vérifiez et complétez les informations, puis enregistrez.</p>
+    {% endif %}
     <form method="post" action="{{ url_for('review.save_new_article', month=newsletter.month) }}" class="card-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="lien" value="{{ form.lien }}">
@@ -33,7 +43,9 @@
       <div class="grid">
         <div class="field field-wide">
           <label for="titre">Titre</label>
-          <input type="text" id="titre" name="titre" value="{{ form.titre or '' }}" maxlength="300" required>
+          <input type="text" id="titre" name="titre" value="{{ form.titre or '' }}" maxlength="300" required
+                 {% if error_field == "titre" %}aria-invalid="true" aria-describedby="titre-err"{% endif %}>
+          {% if error_field == "titre" %}<p class="field-error" id="titre-err">{{ error }}</p>{% endif %}
         </div>
         <div class="field">
           <label for="enseigne">Enseigne</label>
@@ -47,7 +59,9 @@
         </div>
         <div class="field" id="autre-field">
           <label for="autre">Autre enseigne</label>
-          <input type="text" id="autre" name="enseigne_autre" value="{{ form.enseigne_autre or '' }}" maxlength="100">
+          <input type="text" id="autre" name="enseigne_autre" value="{{ form.enseigne_autre or '' }}" maxlength="100"
+                 {% if error_field == "enseigne_autre" %}aria-invalid="true" aria-describedby="autre-err"{% endif %}>
+          {% if error_field == "enseigne_autre" %}<p class="field-error" id="autre-err">{{ error }}</p>{% endif %}
         </div>
         <div class="field">
           <label for="secteur">Secteur</label>
@@ -55,11 +69,15 @@
         </div>
         <div class="field">
           <label for="date">Date</label>
-          <input type="date" id="date" name="date" value="{{ form.date or '' }}">
+          <input type="date" id="date" name="date" value="{{ form.date or '' }}"
+                 {% if error_field == "date" %}aria-invalid="true" aria-describedby="date-err"{% endif %}>
+          {% if error_field == "date" %}<p class="field-error" id="date-err">{{ error }}</p>{% endif %}
         </div>
         <div class="field">
           <label for="source">Source</label>
-          <input type="text" id="source" name="source" value="{{ form.source or '' }}" maxlength="120" required>
+          <input type="text" id="source" name="source" value="{{ form.source or '' }}" maxlength="120" required
+                 {% if error_field == "source" %}aria-invalid="true" aria-describedby="source-err"{% endif %}>
+          {% if error_field == "source" %}<p class="field-error" id="source-err">{{ error }}</p>{% endif %}
         </div>
         <div class="field field-wide">
           <label for="extrait">Premières lignes</label>
@@ -67,6 +85,14 @@
           <p class="help" id="extrait-aide">Texte repris de l'article : vous pouvez le couper ou corriger une faute, mais pas le réécrire.</p>
         </div>
         <label class="check"><input type="checkbox" name="opportunite" {% if form.opportunite %}checked{% endif %}> Opportunité (l'enseigne cherche des emplacements)</label>
+        {% if refused %}
+          <div class="field field-wide confirm-box">
+            <label class="check"><input type="checkbox" name="confirme" {% if form.confirme %}checked{% endif %}
+              {% if error_field == "confirme" %}aria-invalid="true" aria-describedby="confirme-err"{% endif %}>
+              J'ai ouvert ce lien dans mon navigateur et il affiche bien l'article</label>
+            {% if error_field == "confirme" %}<p class="field-error" id="confirme-err">{{ error }}</p>{% endif %}
+          </div>
+        {% endif %}
       </div>
       <button type="submit" class="btn btn-primary">Enregistrer l'article</button>
       <a class="btn" href="{{ url_for('review.add_article', month=newsletter.month, rubrique=form.rubrique) }}">Changer de lien</a>

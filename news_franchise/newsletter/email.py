@@ -20,6 +20,8 @@ import shutil
 import sqlite3
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from email.message import EmailMessage
+from email.policy import SMTP
 from pathlib import Path
 
 from flask import render_template
@@ -43,7 +45,7 @@ from news_franchise.newsletter.view import (
 EMAIL_WIDTH = 600
 GMAIL_CLIP_BYTES = 102 * 1024  # au-delà, Gmail tronque le message (« Message tronqué »)
 GMAIL_CLIP_MARGIN = 92 * 1024  # avertissement avant la limite
-PACKAGE_FORMAT = "news-franchise-email/1"
+PACKAGE_FORMAT = "news-franchise-email/2"
 MAIN_PHOTO_SIZE = (520, 480)  # affichée en 260 × 240 (écrans haute densité)
 THUMB_SIZE = (184, 140)  # affichée en 92 × 70
 JPEG_QUALITY = 80
@@ -393,13 +395,44 @@ def build_email(
     return replace(export, warnings=tuple(warnings))
 
 
+def mime_message(export: EmailExport) -> bytes:
+    """Message complet au format MIME, tel que Gmail le stocke :
+
+    multipart/alternative (version texte, puis HTML) ; le HTML est un multipart/related qui
+    contient les images, chacune avec son Content-ID (appelé par « cid: » dans le HTML) et
+    marquée « inline ». C'est cette forme que Gmail affiche dans un brouillon : les images
+    jointes par GmailApp.createDraft(… inlineImages …) n'y apparaissent pas toujours.
+    Pas d'expéditeur ni de destinataire : Gmail met votre adresse, vous ajoutez les
+    destinataires dans le brouillon.
+    """
+    message = EmailMessage(policy=SMTP)
+    message["Subject"] = export.subject
+    message.set_content(export.text, subtype="plain", charset="utf-8")
+    message.add_alternative(export.html, subtype="html", charset="utf-8")
+    html_part = message.get_payload()[1]
+    for image in export.images:
+        maintype, subtype = image.mime_type.split("/")
+        html_part.add_related(
+            image.data,
+            maintype=maintype,
+            subtype=subtype,
+            cid=f"<{image.cid}>",
+            filename=image.file_name,
+            disposition="inline",
+        )
+    return message.as_bytes()
+
+
 def package_json(export: EmailExport, created_at: datetime | None = None) -> str:
-    """Paquet lu par le script Apps Script : objet, HTML, texte et images (base64)."""
+    """Paquet lu par le script Apps Script : message MIME complet (« raw », base64 URL,
+    comme l'attend l'API Gmail), et pour information l'objet, le HTML, le texte et les
+    images (base64)."""
     created_at = created_at or datetime.now(UTC)
     payload = {
         "format": PACKAGE_FORMAT,
         "month": export.month,
         "createdAt": created_at.isoformat(timespec="seconds"),
+        "raw": base64.urlsafe_b64encode(mime_message(export)).decode("ascii"),
         "subject": export.subject,
         "htmlBody": export.html,
         "textBody": export.text,
@@ -430,6 +463,7 @@ def write_email_export(export: EmailExport, settings: Settings) -> ExportFiles:
     """Écrit l'export (le précédent du même mois est remplacé) :
 
     - news-franchise-AAAA-MM.html et images/ : l'e-mail à ouvrir dans un navigateur ;
+    - news-franchise-AAAA-MM.eml : le message complet (s'ouvre avec Outlook ou Thunderbird) ;
     - news-franchise-AAAA-MM.json : le paquet pour le script Apps Script, copié aussi dans
       le dossier Google Drive (NF_DRIVE_DIR) s'il est configuré.
     """
@@ -441,6 +475,7 @@ def write_email_export(export: EmailExport, settings: Settings) -> ExportFiles:
         (folder / "images" / image.file_name).write_bytes(image.data)
     html_path = folder / f"news-franchise-{export.month}.html"
     html_path.write_text(export.browser_html, encoding="utf-8")
+    (folder / f"news-franchise-{export.month}.eml").write_bytes(mime_message(export))
     package = folder / package_name(export.month)
     package.write_text(package_json(export), encoding="utf-8")
     drive_copy = None

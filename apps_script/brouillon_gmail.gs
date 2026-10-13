@@ -2,9 +2,14 @@
  * News Franchise — crée le brouillon Gmail de la newsletter.
  *
  * Lit, dans le dossier Google Drive DOSSIER_DRIVE, le paquet le plus récent produit par
- * l'application (news-franchise-AAAA-MM.json : objet, HTML, version texte, images), puis
- * crée un brouillon dans Gmail, images comprises. Aucun destinataire n'est ajouté : vous
- * les choisissez dans Gmail avant l'envoi. Rien n'est envoyé par ce script.
+ * l'application (news-franchise-AAAA-MM.json), puis crée un brouillon dans Gmail avec le
+ * message complet préparé par l'application (texte, HTML et images intégrées). Aucun
+ * destinataire n'est ajouté : vous les choisissez dans Gmail avant l'envoi. Rien n'est
+ * envoyé par ce script.
+ *
+ * Le brouillon est créé avec l'API Gmail (service avancé « Gmail API », à ajouter une fois
+ * dans l'éditeur : Services +) : c'est ce qui garde les photos et logos visibles dans le
+ * brouillon (avec GmailApp.createDraft et inlineImages, elles n'y apparaissent pas toujours).
  *
  * Installation : voir docs/email.md dans le projet News Franchise.
  */
@@ -13,7 +18,7 @@
 const DOSSIER_DRIVE = 'News Franchise';
 
 /** Format de paquet attendu (produit par l'application). */
-const FORMAT_PAQUET = 'news-franchise-email/1';
+const FORMAT_PAQUET = 'news-franchise-email/2';
 
 /** Noms de paquets reconnus : news-franchise-AAAA-MM.json */
 const MOTIF_NOM = /^news-franchise-\d{4}-(0[1-9]|1[0-2])\.json$/;
@@ -23,20 +28,14 @@ const MOTIF_NOM = /^news-franchise-\d{4}-(0[1-9]|1[0-2])\.json$/;
  * Fonction à lancer depuis l'éditeur Apps Script (bouton « Exécuter »).
  */
 function creerBrouillon() {
+  if (typeof Gmail === 'undefined') {
+    throw new Error('Service « Gmail API » non activé. Dans l\'éditeur Apps Script, ' +
+      'cliquez sur « Services » (+) à gauche, choisissez « Gmail API », puis « Ajouter ». ' +
+      'Relancez ensuite creerBrouillon.');
+  }
   const fichier = dernierPaquet_();
   const paquet = lirePaquet_(fichier);
-  const imagesEnLigne = {};
-  paquet.images.forEach(function (image) {
-    imagesEnLigne[image.cid] = Utilities.newBlob(
-      Utilities.base64Decode(image.data),
-      image.mimeType,
-      image.fileName
-    );
-  });
-  const brouillon = GmailApp.createDraft('', paquet.subject, paquet.textBody, {
-    htmlBody: paquet.htmlBody,
-    inlineImages: imagesEnLigne,
-  });
+  const brouillon = Gmail.Users.Drafts.create({ message: { raw: paquet.raw } }, 'me');
   Logger.log(
     'Brouillon créé : « %s » (%s images), depuis %s. Ouvrez Gmail > Brouillons, ' +
       'ajoutez les destinataires, relisez, puis envoyez.',
@@ -44,7 +43,7 @@ function creerBrouillon() {
     paquet.images.length,
     fichier.getName()
   );
-  return brouillon.getId();
+  return brouillon.id;
 }
 
 /** Paquet le plus récent (date de modification) du dossier DOSSIER_DRIVE. */
@@ -79,10 +78,11 @@ function lirePaquet_(fichier) {
     throw new Error('Paquet illisible : ' + fichier.getName() + ' (' + erreur + ').');
   }
   if (paquet.format !== FORMAT_PAQUET) {
-    throw new Error('Format de paquet inattendu (' + paquet.format + ') : ' +
-      'mettez à jour ce script ou l\'application.');
+    throw new Error('Format de paquet inattendu (' + paquet.format + ', attendu ' +
+      FORMAT_PAQUET + ') : copiez la dernière version de apps_script/brouillon_gmail.gs ' +
+      'dans ce projet, ou préparez à nouveau l\'e-mail dans l\'application.');
   }
-  ['subject', 'htmlBody', 'textBody'].forEach(function (cle) {
+  ['raw', 'subject', 'htmlBody', 'textBody'].forEach(function (cle) {
     if (typeof paquet[cle] !== 'string' || paquet[cle] === '') {
       throw new Error('Paquet incomplet : « ' + cle + ' » manquant.');
     }

@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, relecture et contenu interne, aperçu aux couleurs de la charte Carmila, e-mail Gmail (brouillon créé par un script Apps Script). À venir : la version A4 imprimable.
+> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, relecture et contenu interne, aperçu aux couleurs de la charte Carmila, e-mail Gmail (brouillon créé par un script Apps Script et l'API Gmail, images comprises). À venir : la version A4 imprimable.
 
 ## Prérequis
 
@@ -461,7 +461,8 @@ NewsFranchise/
 ├── .gitattributes          # Fins de ligne (CRLF pour les .bat)
 ├── README.md
 ├── apps_script/
-│   └── brouillon_gmail.gs  # Script Google Apps Script : brouillon Gmail depuis le paquet
+│   ├── brouillon_gmail.gs  # Script Google Apps Script : brouillon Gmail depuis le paquet
+│   └── appsscript.json     # Manifeste : service avancé Gmail API (facultatif à copier)
 ├── config/
 │   ├── enseignes.yaml      # Référentiel des 15 enseignes suivies
 │   ├── regles_veille.yaml  # Mots-clés de tri de la veille (rubrique 1, exclusions)

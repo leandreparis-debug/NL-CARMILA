@@ -9,6 +9,7 @@ import re
 import sqlite3
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from email import message_from_bytes, policy
 from pathlib import Path
 
 import pytest
@@ -213,6 +214,7 @@ def test_write_export_replaces_previous_and_copies_to_drive(
     export = _email(app, conn, demo_settings)
     files = write_email_export(export, demo_settings)
     assert files.html.is_file() and files.package.is_file() and files.drive_copy is None
+    assert (files.folder / "news-franchise-2000-01.eml").is_file()
     stale = files.folder / "images" / "ancienne.png"
     stale.write_bytes(b"x")
     # La version navigateur appelle les images voisines, pas des cid.
@@ -242,8 +244,41 @@ def test_drive_dir_setting(tmp_path: Path) -> None:
 def test_apps_script_matches_package_format() -> None:
     script = (PROJECT / "apps_script" / "brouillon_gmail.gs").read_text(encoding="utf-8")
     assert f"const FORMAT_PAQUET = '{PACKAGE_FORMAT}';" in script
-    assert "GmailApp.createDraft(" in script and "inlineImages" in script
-    assert ".send(" not in script  # le script ne fait jamais d'envoi
+    # Brouillon créé à partir du message MIME complet (API Gmail), jamais envoyé.
+    assert "Gmail.Users.Drafts.create({ message: { raw: paquet.raw } }, 'me')" in script
+    assert ".send(" not in script and "sendEmail" not in script
+    manifest = json.loads((PROJECT / "apps_script" / "appsscript.json").read_text("utf-8"))
+    services = manifest["dependencies"]["enabledAdvancedServices"]
+    assert {"userSymbol": "Gmail", "serviceId": "gmail", "version": "v1"} in services
+
+
+def test_mime_message_has_inline_images(
+    app: Flask, conn: sqlite3.Connection, demo_settings: Settings
+) -> None:
+    export = _email(app, conn, demo_settings)
+    data = json.loads(package_json(export))
+    message = message_from_bytes(base64.urlsafe_b64decode(data["raw"]), policy=policy.default)
+    assert message["Subject"] == "News Franchise — Janvier 2000"
+    assert message.get_content_type() == "multipart/alternative"
+    plain, related = message.get_payload()
+    assert plain.get_content_type() == "text/plain"
+    # Fins de ligne CRLF : norme des e-mails.
+    assert plain.get_content().replace("\r\n", "\n") == export.text
+    assert related.get_content_type() == "multipart/related"
+    html, *images = related.get_payload()
+    assert (
+        html.get_content_type() == "text/html"
+        and html.get_content().replace("\r\n", "\n").strip() == export.html.strip()
+    )
+    # Chaque image appelée par cid: dans le HTML est jointe, en ligne, avec son Content-ID.
+    by_cid = {part["Content-ID"].strip("<>"): part for part in images}
+    assert set(by_cid) == set(re.findall(r'src="cid:([^"]+)"', export.html))
+    for image in export.images:
+        part = by_cid[image.cid]
+        assert part.get_content_disposition() == "inline"
+        assert part.get_content_type() == image.mime_type
+        assert part.get_content() == image.data
+    assert {"nf-photo-1", "nf-photo-2", "nf-photo-3"} <= set(by_cid)  # photos des ouvertures
 
 
 def test_shape_png_are_transparent() -> None:

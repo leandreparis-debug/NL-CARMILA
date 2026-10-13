@@ -41,8 +41,8 @@ dans votre compte Google, avec vos droits.
 5. Dans Gmail, dossier **Brouillons** : ajoutez les destinataires, relisez, envoyez.
 
 Les fichiers de l'export sont aussi dans `<données>\exports\AAAA-MM\email\` : l'e-mail à
-ouvrir dans un navigateur (`news-franchise-AAAA-MM.html` et son dossier `images`) et le
-paquet. Préparer à nouveau l'e-mail remplace l'export précédent du même mois.
+ouvrir dans un navigateur (`news-franchise-AAAA-MM.html` et son dossier `images`), le
+message complet (`news-franchise-AAAA-MM.eml`) et le paquet. Préparer à nouveau l'e-mail remplace l'export précédent du même mois.
 
 ## Installer le script (une seule fois)
 
@@ -51,9 +51,27 @@ paquet. Préparer à nouveau l'e-mail remplace l'export précédent du même moi
 2. Ouvrez https://script.google.com, **Nouveau projet**, nommez-le « News Franchise ».
 3. Remplacez le contenu de `Code.gs` par celui du fichier
    `apps_script/brouillon_gmail.gs` du projet, puis enregistrez.
-4. Choisissez la fonction **creerBrouillon** et cliquez **Exécuter**. Google demande
+4. Activez le service **Gmail API** : dans la colonne de gauche, **Services** (+), choisissez
+   **Gmail API**, puis **Ajouter**. (Sans lui, le script s'arrête avec un message qui le
+   rappelle.)
+5. Choisissez la fonction **creerBrouillon** et cliquez **Exécuter**. Google demande
    d'autoriser le script à lire Google Drive et à gérer Gmail (création du brouillon) :
    acceptez. Cette autorisation n'est demandée qu'une fois.
+
+**Mise à jour du script** : si le script répond « Format de paquet inattendu », recopiez
+la dernière version de `apps_script/brouillon_gmail.gs` dans le projet Apps Script (et
+vérifiez que le service Gmail API est bien ajouté).
+
+### Pourquoi l'API Gmail plutôt que GmailApp ?
+
+Les photos et logos sont des images **intégrées** au message (appelées par `cid:` dans le
+HTML). Avec `GmailApp.createDraft(…, { inlineImages })`, ces images n'apparaissent pas
+toujours dans un **brouillon** ouvert dans Gmail. L'application prépare donc elle-même le
+message complet au format standard des e-mails (MIME : version texte, HTML, et chaque
+image jointe « en ligne » avec son identifiant), et le script le dépose tel quel avec
+l'API Gmail (`Gmail.Users.Drafts.create`). Le même message est enregistré dans
+`news-franchise-AAAA-MM.eml`, que l'on peut ouvrir avec Outlook ou Thunderbird pour le
+vérifier.
 
 Si votre organisation Google Workspace bloque les scripts Apps Script ou les autorisations
 demandées, l'administrateur doit les autoriser : le script ne peut pas s'en passer.
@@ -64,8 +82,9 @@ demandées, l'administrateur doit les autoriser : le script ne peut pas s'en pas
 
 | Clé | Contenu |
 | --- | --- |
-| `format` | `news-franchise-email/1` (le script refuse un autre format) |
+| `format` | `news-franchise-email/2` (le script refuse un autre format) |
 | `month`, `createdAt` | mois de la newsletter, date de préparation (UTC) |
+| `raw` | message complet au format MIME, encodé en base64 « URL » (ce que dépose le script) |
 | `subject` | objet : « News Franchise — Octobre 2026 » |
 | `htmlBody` | HTML de l'e-mail ; les images y sont appelées par `cid:<nom>` |
 | `textBody` | version texte |

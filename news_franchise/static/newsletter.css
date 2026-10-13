@@ -135,3 +135,6 @@ body.nl-page {
   .nl { max-width: none; margin: 0; padding: 0; }
   .nl-section-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; break-after: avoid; }
 }
+
+.nl-thumbs { display: flex; gap: 6px; margin-top: 6px; }
+.nl-thumbs img { display: block; width: 96px; height: auto; }

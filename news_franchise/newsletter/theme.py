@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
+from PIL import Image, ImageDraw, UnidentifiedImageError
 
 from news_franchise.config import PROJECT_DIR, ConfigError
+from news_franchise.fonts import system_font
 
 THEME_FILE = PROJECT_DIR / "config" / "theme.yaml"
 PROVISIONAL_LOGO = PROJECT_DIR / "config" / "assets" / "logo-provisoire.png"
@@ -123,22 +124,8 @@ def generate_provisional_logo(path: Path = PROVISIONAL_LOGO) -> Path:
     width, height = 600, 120
     image = Image.new("RGB", (width, height), (0x1D, 0x35, 0x57))
     draw = ImageDraw.Draw(image)
-    font: ImageFont.ImageFont | ImageFont.FreeTypeFont
-    for candidate in (
-        "arialbd.ttf",
-        "DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    ):
-        try:
-            font = ImageFont.truetype(candidate, 54)
-            break
-        except OSError:
-            continue
-    else:
-        font = ImageFont.load_default(size=54)
-    draw.text(
-        (width // 2, height // 2), "News Franchise", fill=(255, 255, 255), font=font, anchor="mm"
-    )
+    text, font = system_font(54, "News Franchise")
+    draw.text((width // 2, height // 2), text, fill=(255, 255, 255), font=font, anchor="mm")
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, format="PNG", optimize=True)
     return path

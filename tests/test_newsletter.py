@@ -367,6 +367,8 @@ def test_preview_of_demo_month(demo_client: FlaskClient, settings: Settings) -> 
     assert "Opportunité emplacements" in html
     # Photos principales servies par l'application.
     assert html.count('<figure class="nl-photo">') == 2
+    # Pokawa a 2 photos : la seconde en vignette.
+    assert html.count('<div class="nl-thumbs">') == 1
     assert "/photos/2000-01/" in html
     # QR codes mis en cache dans <données>/exports/qr.
     assert len(list((settings.exports_dir / "qr").glob("*.svg"))) == 13
@@ -437,3 +439,21 @@ def test_theme_screen_shows_warning_and_errors(
     assert response.status_code == 200
     assert "logo introuvable" in _html(response)
     assert client.get("/theme/logo").status_code == 404
+
+
+def test_provisional_logo_is_generated(tmp_path: Path) -> None:
+    from news_franchise.newsletter.theme import generate_provisional_logo
+
+    path = generate_provisional_logo(tmp_path / "assets" / "logo.png")
+    with Image.open(path) as image:
+        assert image.format == "PNG" and image.size == (600, 120)
+
+
+def test_system_font_falls_back_without_accents(monkeypatch: pytest.MonkeyPatch) -> None:
+    from news_franchise import fonts
+
+    monkeypatch.setattr(fonts, "FONT_CANDIDATES", ("introuvable.ttf",))
+    text, _ = fonts.system_font(20, "DÉMO")
+    assert text == "DMO"
+    text, _ = fonts.system_font(20, "DÉMO", "DEMO")
+    assert text == "DEMO"

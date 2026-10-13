@@ -307,7 +307,8 @@ qu'elle sera publiée, en version imprimable : page blanche d'environ 800 px de 
 - Sous le titre de chaque article : un **QR code** du lien de l'article (pour la version
   papier), le badge **« Opportunité emplacements »** si besoin, la source, la date et
   l'extrait.
-- Ouvertures : **photo principale** (choisie dans le contenu interne) et sa légende.
+- Ouvertures : **photo principale** (choisie dans le contenu interne) et sa légende ; les
+  autres photos en vignettes (chaque export pourra les retirer faute de place).
 - Franchisés : le nombre de points de vente n'apparaît que s'il est connu.
 - **Pied de page** : texte défini dans le thème.
 

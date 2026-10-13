@@ -45,8 +45,17 @@ def qr_cache_dir(settings: Settings) -> Path:
     return settings.exports_dir / "qr"
 
 
-def newsletter_context(view: NewsletterView, theme: Theme, settings: Settings, medium: str) -> dict:
+def newsletter_context(
+    view: NewsletterView,
+    theme: Theme,
+    settings: Settings,
+    medium: str,
+    show_other_photos: bool = True,
+) -> dict:
     """Variables communes aux gabarits de la newsletter.
+
+    show_other_photos : afficher, en vignettes, les photos autres que la photo principale
+    (chaque sortie décide selon la place dont elle dispose).
 
     qr : URL → SVG en ligne (produit ici, depuis des URL déjà validées http/https) ;
     photo_src : nom de photo → adresse de la photo servie par l'application.
@@ -63,6 +72,7 @@ def newsletter_context(view: NewsletterView, theme: Theme, settings: Settings, m
         },
         "logo_src": url_for("newsletter.logo"),
         "opportunity_label": OPPORTUNITY_LABEL,
+        "show_other_photos": show_other_photos,
     }
 
 

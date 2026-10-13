@@ -20,7 +20,7 @@ from collections.abc import Callable, Sequence
 from contextlib import closing
 from datetime import UTC, datetime
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from news_franchise.bootstrap import prepare_database
 from news_franchise.config import ConfigError, Settings, load_settings
@@ -28,6 +28,7 @@ from news_franchise.content.photos import process_photo
 from news_franchise.db import DatabaseError
 from news_franchise.db.connection import get_connection
 from news_franchise.detect.runner import run_detection
+from news_franchise.fonts import system_font
 from news_franchise.models import Article, Meeting, Opening, OpeningPhoto
 from news_franchise.repositories import articles, brands, meetings, newsletters, openings
 
@@ -155,29 +156,6 @@ DEMO_MEETINGS: tuple[tuple[str, int, str], ...] = (
 DEMO_PLANS_URL = "https://example.com/demo/plans"
 
 
-# Polices système avec accents (Windows, puis Linux, puis macOS).
-FONT_CANDIDATES = (
-    "arialbd.ttf",
-    "arial.ttf",
-    "DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/Library/Fonts/Arial.ttf",
-)
-
-
-def _demo_font(
-    size: int, text: str, ascii_text: str
-) -> tuple[str, ImageFont.ImageFont | ImageFont.FreeTypeFont]:
-    """Police système avec accents si disponible ; sinon police intégrée et texte sans
-    accent (la police intégrée de Pillow n'a pas « É »)."""
-    for candidate in FONT_CANDIDATES:
-        try:
-            return text, ImageFont.truetype(candidate, size)
-        except OSError:
-            continue
-    return ascii_text, ImageFont.load_default(size=size)
-
-
 def demo_photo(color: tuple[int, int, int], label: str, seed: int) -> bytes:
     """Photo de démonstration (JPEG 2400 × 1800) clairement marquée « DÉMO ».
 
@@ -201,10 +179,10 @@ def demo_photo(color: tuple[int, int, int], label: str, seed: int) -> bytes:
     noise = Image.effect_noise((width, height), 28).convert("RGB")
     image = Image.blend(image, noise, 0.12)
     draw = ImageDraw.Draw(image)
-    title, font = _demo_font(240, "DÉMO", "DEMO")
+    title, font = system_font(240, "DÉMO", "DEMO")
     draw.rectangle([0, height // 2 - 220, width, height // 2 + 220], fill=(255, 255, 255))
     draw.text((width // 2, height // 2 - 60), title, fill=(200, 20, 30), font=font, anchor="mm")
-    caption, small = _demo_font(90, label, label.encode("ascii", "ignore").decode())
+    caption, small = system_font(90, label)
     draw.text((width // 2, height // 2 + 140), caption, fill=(30, 30, 30), font=small, anchor="mm")
     buffer = io.BytesIO()
     image.save(buffer, format="JPEG", quality=92)

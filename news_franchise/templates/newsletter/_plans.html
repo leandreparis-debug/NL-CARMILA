@@ -1,6 +1,16 @@
 {# Lien vers les plans de développement (rubrique 6). En version imprimée, l'adresse est
    aussi écrite en clair. #}
+{% if medium == "email" %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr><td style="{{ st.plans }}">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr><td bgcolor="{{ theme.colors.secondary }}" style="{{ st.button_cell }}"><a href="{{ item.url }}" style="{{ st.button }}">{{ item.label }} →</a></td></tr>
+    </table>
+  </td></tr>
+</table>
+{% else %}
 <div class="nl-plans">
   <a class="nl-button" href="{{ item.url }}">{{ item.label }} →</a>
   {% if medium == "print" %}<p class="nl-url">{{ item.url }}</p>{% endif %}
 </div>
+{% endif %}

@@ -9,7 +9,7 @@ Application locale qui prépare chaque mois la **newsletter interne de Carmila F
 
 L'application est mono-utilisateur, fonctionne uniquement sur le poste (adresse `127.0.0.1`) et **n'utilise aucune IA** : aucun appel à un modèle de langage, aucun résumé généré.
 
-> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, relecture et contenu interne. Le bouton Exporter est encore désactivé.
+> **État actuel (v0.1.0)** : socle technique, diagnostic des sources, base de données locale, collecte de la veille, détection des franchisés et opportunités, relecture et contenu interne, aperçu aux couleurs de la charte Carmila, e-mail Gmail (brouillon créé par un script Apps Script). À venir : la version A4 imprimable.
 
 ## Prérequis
 
@@ -67,6 +67,7 @@ La configuration se fait par variables d'environnement, ou plus simplement dans 
 | `NF_DEBUG` | Mode debug Flask (`true`/`false`) | `false` |
 | `NF_OPEN_BROWSER` | Ouvrir le navigateur au lancement | `true` |
 | `NF_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
+| `NF_DRIVE_DIR` | dossier Google Drive synchronisé (facultatif) où copier le paquet de l'e-mail | vide (copie manuelle) |
 
 Une valeur invalide arrête l'application avec un message qui nomme la variable fautive. Le fichier `.env` n'est pas versionné : n'y mettez rien qui doive être partagé. Aucun secret n'est écrit dans le code.
 
@@ -323,6 +324,21 @@ Ctrl + P depuis l'aperçu donne déjà une impression A4 (la démonstration, au-
 arrivent dans les étapes suivantes et reprendront les mêmes gabarits
 (`news_franchise/templates/newsletter/_*.html`).
 
+## Exporter l'e-mail (Gmail)
+
+Page d'accueil → **Exporter** (ou bouton **Exporter** de l'écran du mois) → **Préparer
+l'e-mail**. L'application produit l'e-mail de la newsletter, adapté à Gmail (mise en page en
+tableaux de 600 px, images jointes au message, version texte), et un **paquet**
+`news-franchise-AAAA-MM.json`. Déposé dans le dossier **News Franchise** de Google Drive
+(automatiquement si `NF_DRIVE_DIR` est renseigné dans `.env`), ce paquet est lu par le
+script `apps_script/brouillon_gmail.gs`, qui crée un **brouillon Gmail** : il ne reste qu'à
+ajouter les destinataires et envoyer. Rien n'est envoyé automatiquement, et l'application
+ne stocke aucun identifiant Google.
+
+La page d'export affiche la taille du HTML (Gmail tronque au-delà de 102 Ko : un
+avertissement s'affiche avant), les images jointes et l'e-mail tel qu'il sera reçu.
+Installation du script (une fois) et marche à suivre : [`docs/email.md`](docs/email.md).
+
 ## Thème et charte graphique
 
 Tout ce qui relève de la charte graphique est dans **`config/theme.yaml`** : nom, phrase
@@ -444,6 +460,8 @@ NewsFranchise/
 ├── .gitignore
 ├── .gitattributes          # Fins de ligne (CRLF pour les .bat)
 ├── README.md
+├── apps_script/
+│   └── brouillon_gmail.gs  # Script Google Apps Script : brouillon Gmail depuis le paquet
 ├── config/
 │   ├── enseignes.yaml      # Référentiel des 15 enseignes suivies
 │   ├── regles_veille.yaml  # Mots-clés de tri de la veille (rubrique 1, exclusions)
@@ -457,6 +475,7 @@ NewsFranchise/
 │   ├── data-model.md       # Modèle de données et procédure de migration
 │   ├── detection.md        # Détection des opportunités et des franchisés
 │   ├── theme.md            # Charte Carmila appliquée au thème, valeurs modifiables
+│   ├── email.md            # E-mail Gmail : préparation, script Apps Script, paquet
 │   └── securite.md         # CSRF, contrôle du Host, échappement, liens non modifiables
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
@@ -486,7 +505,8 @@ NewsFranchise/
 │   ├── detect/             # Détection : règles, phrases, lieux, opportunités, franchisés
 │   ├── review/             # Relecture : limites, actions (service.py), pages (views.py)
 │   ├── content/            # Contenu interne : photos.py (traitement), service.py, pages
-│   ├── newsletter/         # Thème, formes de la charte, dates, QR codes, vue, aperçu
+│   ├── newsletter/         # Thème, formes de la charte, dates, QR codes, vue, aperçu,
+│   │                       # e-mail Gmail (email.py) et pages d'export
 │   ├── security.py         # Clé secrète, jeton CSRF, contrôle du Host et de l'origine
 │   ├── fonts.py            # Police système pour les images générées (logo, démo)
 │   ├── tools/
@@ -513,6 +533,7 @@ NewsFranchise/
     ├── test_review.py      # Interface de relecture et sécurité
     ├── test_content.py     # Contenu interne : Une, ouvertures, photos, rencontres, plans
     ├── test_newsletter.py  # Thème, dates, vue, QR codes, aperçu
+    ├── test_email.py       # E-mail Gmail, paquet Apps Script, pages d'export
     ├── test_http_client.py
     ├── test_discovery.py
     ├── test_evaluation.py

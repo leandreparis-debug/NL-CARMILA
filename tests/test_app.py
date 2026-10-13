@@ -31,9 +31,11 @@ def test_index(client: FlaskClient) -> None:
     html = response.get_data(as_text=True)
     assert "News Franchise" in html
     assert format_month_fr(date.today()) in html
-    for label in ("Collecter la veille", "Relire", "Contenu interne", "Exporter"):
+    for label in ("Collecter la veille", "Relire", "Contenu interne", "Exporter", "Thème"):
         assert label in html
-    assert "disabled" in html
+    # Toutes les fonctions sont disponibles : plus de bouton grisé ni de mention « prochaines
+    # versions ».
+    assert "disabled" not in html and "prochaines versions" not in html
 
 
 def test_health(client: FlaskClient) -> None:

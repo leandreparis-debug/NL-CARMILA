@@ -30,7 +30,7 @@ FEATURES: tuple[tuple[str, str | None], ...] = (
     ("Collecter la veille", "collect.index"),
     ("Relire", "review.index"),
     ("Contenu interne", "content.start"),
-    ("Exporter", None),
+    ("Exporter", "newsletter.exports"),
     ("Thème", "newsletter.theme"),
 )
 

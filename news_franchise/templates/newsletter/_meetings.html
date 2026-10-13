@@ -1,4 +1,24 @@
 {# Enseignes rencontrées (rubrique 4) : cartes compactes sur deux colonnes. #}
+{% if medium == "email" %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  {% for row in section.items|batch(2) %}
+    <tr>
+      {% for item in row %}
+        <td width="50%" style="padding:0 {{ '5px' if loop.first else '0' }} 10px {{ '0' if loop.first else '5px' }};vertical-align:top;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="{{ st.card_cell }}border-left:4px solid {{ accent.color }};">
+              <p style="{{ st.strong }}">{{ item.brand }}</p>
+              {% if item.date_label %}<p style="{{ st.meta }}">{{ item.date_label }}</p>{% endif %}
+              {% if item.comment %}<p style="{{ st.text }}">{{ item.comment }}</p>{% endif %}
+            </td></tr>
+          </table>
+        </td>
+      {% endfor %}
+      {% if row|length == 1 %}<td width="50%"></td>{% endif %}
+    </tr>
+  {% endfor %}
+</table>
+{% else %}
 <ul class="nl-meetings">
   {% for item in section.items %}
     <li class="nl-meeting">
@@ -8,3 +28,4 @@
     </li>
   {% endfor %}
 </ul>
+{% endif %}

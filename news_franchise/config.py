@@ -40,6 +40,8 @@ class Settings:
         debug : active le mode debug de Flask (à ne jamais activer en usage normal).
         open_browser : ouvre le navigateur au lancement.
         log_level : niveau de journalisation (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+        drive_dir : dossier Google Drive synchronisé sur le poste (facultatif) où copier
+            le fichier d'e-mail lu par le script Apps Script ; None = copie manuelle.
     """
 
     data_dir: Path
@@ -48,6 +50,7 @@ class Settings:
     debug: bool = False
     open_browser: bool = True
     log_level: str = "INFO"
+    drive_dir: Path | None = None
 
     def __post_init__(self) -> None:
         """Vérifie les invariants qui ne dépendent pas de la source de configuration."""
@@ -148,9 +151,25 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         debug=_parse_bool(env, "NF_DEBUG", default=False),
         open_browser=_parse_bool(env, "NF_OPEN_BROWSER", default=True),
         log_level=_parse_log_level(env),
+        drive_dir=_parse_drive_dir(env),
     )
     ensure_data_dir(settings.data_dir)
     return settings
+
+
+def _parse_drive_dir(env: Mapping[str, str]) -> Path | None:
+    """Lit NF_DRIVE_DIR : dossier existant (jamais créé : c'est un dossier Google Drive)."""
+    raw = _get(env, "NF_DRIVE_DIR")
+    if raw is None:
+        return None
+    path = Path(raw).expanduser()
+    if not path.is_dir():
+        raise ConfigError(
+            f"NF_DRIVE_DIR : le dossier {path} n'existe pas. Indiquez le dossier Google Drive "
+            "synchronisé sur ce poste (ex. G:\\Mon Drive\\News Franchise), ou laissez la "
+            "variable vide pour copier le fichier à la main."
+        )
+    return path.resolve()
 
 
 def _get(env: Mapping[str, str], name: str) -> str | None:

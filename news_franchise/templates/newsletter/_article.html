@@ -1,4 +1,20 @@
 {# Fiche actualité (rubriques 1 et 2). QR code du lien sous le titre en version imprimée. #}
+{% if medium == "email" %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td style="{{ st.item }}">
+      {% if item.brand or item.sector %}
+        <p style="{{ st.kicker }}">{% if item.brand %}{{ item.brand }}{% endif %}{% if item.brand and item.sector %} · {% endif %}{% if item.sector %}{{ item.sector }}{% endif %}</p>
+      {% endif %}
+      <p style="{{ st.item_title }}"><a href="{{ item.url }}" style="{{ st.link }}">{{ item.title }}</a></p>
+      <p style="{{ st.meta }}">{{ item.source }}{% if item.date_label %} · {{ item.date_label }}{% endif %}</p>
+      {% if item.opportunity %}<p style="margin:0 0 8px;"><span style="{{ st.badge }}">{{ opportunity_label }}</span></p>{% endif %}
+      {% if item.excerpt %}<p style="{{ st.text }}">{{ item.excerpt }}</p>{% endif %}
+      <p style="margin:0;"><a href="{{ item.url }}" style="{{ st.more }}">Lire l'article →</a></p>
+    </td>
+  </tr>
+</table>
+{% else %}
 <article class="nl-article">
   {% if item.brand or item.sector %}
     <p class="nl-kicker">{% if item.brand %}{{ item.brand }}{% endif %}{% if item.brand and item.sector %} · {% endif %}{% if item.sector %}{{ item.sector }}{% endif %}</p>
@@ -16,3 +32,4 @@
     </div>
   </div>
 </article>
+{% endif %}

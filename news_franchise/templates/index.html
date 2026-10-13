@@ -11,5 +11,5 @@
       {% endif %}
     {% endfor %}
   </section>
-  <p class="hint">Les fonctions grisées seront disponibles dans les prochaines versions.</p>
+  {% if features|selectattr(1, "none")|list %}<p class="hint">Les fonctions grisées seront disponibles dans les prochaines versions.</p>{% endif %}
 {% endblock %}

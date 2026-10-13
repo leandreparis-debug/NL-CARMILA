@@ -18,7 +18,14 @@ from news_franchise.db.connection import get_db
 from news_franchise.models import validate_month
 from news_franchise.newsletter.dates import format_month
 from news_franchise.newsletter.qr import qr_svg
-from news_franchise.newsletter.theme import THEME_FILE, Theme, ThemeError, load_theme
+from news_franchise.newsletter.shapes import SHAPES, motif_svg, shape_svg
+from news_franchise.newsletter.theme import (
+    SECTION_KEYS,
+    THEME_FILE,
+    Theme,
+    ThemeError,
+    load_theme,
+)
 from news_franchise.newsletter.view import (
     OPPORTUNITY_LABEL,
     EmptyNewsletterError,
@@ -58,10 +65,23 @@ def newsletter_context(
     (chaque sortie décide selon la place dont elle dispose).
 
     qr : URL → SVG en ligne (produit ici, depuis des URL déjà validées http/https) ;
-    photo_src : nom de photo → adresse de la photo servie par l'application.
+    photo_src : nom de photo → adresse de la photo servie par l'application ;
+    accents : rubrique → couleur d'accent et couleur du numéro ; icons : rubrique → forme
+    de la charte (SVG) dans sa couleur d'accent ; motif : motif blanc du bandeau.
+    Toutes les couleurs des SVG viennent du thème validé (#RRGGBB).
     """
     cache = qr_cache_dir(settings)
+    accents = {key: theme.accent(key) for key in SECTION_KEYS}
+    # Une forme par rubrique, en alternance (arche, nœud, heptagone).
+    icons = {
+        key: Markup(shape_svg(SHAPES[index % len(SHAPES)], accents[key].color, 22))
+        for index, key in enumerate(SECTION_KEYS)
+    }
     return {
+        "accents": accents,
+        "icons": icons,
+        "front_icons": tuple(icons[f"rubrique_{n}"] for n in (3, 4, 5)),
+        "motif": Markup(motif_svg(theme.colors["background"], opacity=0.9)),
         "view": view,
         "theme": theme,
         "medium": medium,
@@ -71,6 +91,7 @@ def newsletter_context(
             name: url_for("content.photo_file", file_name=name) for name in view.photo_files
         },
         "logo_src": url_for("newsletter.logo"),
+        "logo_reverse_src": url_for("newsletter.logo", variant="blanc"),
         "opportunity_label": OPPORTUNITY_LABEL,
         "show_other_photos": show_other_photos,
     }
@@ -133,14 +154,18 @@ def theme() -> ResponseReturnValue:
         path=path,
         checks=current.contrast_checks(),
         warnings=current.warnings(),
+        accents={key: current.accent(key) for key in SECTION_KEYS},
     )
 
 
 @bp.get("/theme/logo")
-def logo() -> ResponseReturnValue:
-    """Logo du thème (fichier indiqué dans config/theme.yaml)."""
+@bp.get("/theme/logo/<variant>")
+def logo(variant: str = "couleur") -> ResponseReturnValue:
+    """Logo du thème (config/theme.yaml) : « couleur » (logo) ou « blanc » (logo_reverse)."""
+    if variant not in ("couleur", "blanc"):
+        abort(404)
     try:
         current = load_theme(_theme_file())
     except ThemeError:
         abort(404)
-    return send_file(current.logo, max_age=0)
+    return send_file(current.logo_reverse if variant == "blanc" else current.logo, max_age=0)

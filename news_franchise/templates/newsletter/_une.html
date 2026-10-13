@@ -1,20 +1,17 @@
-{# Une : trois chiffres calculés (ouvertures, enseignes rencontrées, franchisés identifiés).
-   Un chiffre dont la rubrique est vide n'a pas de lien (la rubrique n'est pas publiée). #}
-<section class="nl-une" aria-labelledby="nl-une-titre">
+{# Une : trois chiffres calculés (ouvertures, enseignes rencontrées, franchisés identifiés),
+   chacun avec la forme et la couleur de sa rubrique. Un chiffre dont la rubrique est vide
+   n'a pas de lien (la rubrique n'est pas publiée). #}
+{% set une = accents["une"] %}
+<section class="nl-une" aria-labelledby="nl-une-titre" style="--accent: {{ une.color }};">
   <h2 class="nl-une-title" id="nl-une-titre">{{ view.front_title }}</h2>
+  <span class="nl-rule"></span>
   <div class="nl-figures">
     {% for figure in view.front %}
-      {% if figure.anchor and medium == "print" %}
-        <a class="nl-figure" href="#{{ figure.anchor }}">
-          <span class="nl-figure-value">{{ figure.value }}</span>
-          <span class="nl-figure-label">{{ figure.label }}</span>
-        </a>
-      {% else %}
-        <div class="nl-figure">
-          <span class="nl-figure-value">{{ figure.value }}</span>
-          <span class="nl-figure-label">{{ figure.label }}</span>
-        </div>
-      {% endif %}
+      {% if figure.anchor and medium == "print" %}<a class="nl-figure" href="#{{ figure.anchor }}">{% else %}<div class="nl-figure">{% endif %}
+        <span class="nl-figure-icon">{{ front_icons[loop.index0] }}</span>
+        <span class="nl-figure-value">{{ figure.value }}</span>
+        <span class="nl-figure-label">{{ figure.label }}</span>
+      {% if figure.anchor and medium == "print" %}</a>{% else %}</div>{% endif %}
     {% endfor %}
   </div>
 </section>

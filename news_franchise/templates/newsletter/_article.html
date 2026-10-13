@@ -1,14 +1,15 @@
 {# Fiche actualité (rubriques 1 et 2). QR code du lien sous le titre en version imprimée. #}
 <article class="nl-article">
+  {% if item.brand or item.sector %}
+    <p class="nl-kicker">{% if item.brand %}{{ item.brand }}{% endif %}{% if item.brand and item.sector %} · {% endif %}{% if item.sector %}{{ item.sector }}{% endif %}</p>
+  {% endif %}
   <h3 class="nl-article-title"><a href="{{ item.url }}">{{ item.title }}</a></h3>
   <div class="nl-article-body">
     {% if medium == "print" %}
       <div class="nl-qr">{{ qr[item.url] }}</div>
     {% endif %}
     <div class="nl-article-text">
-      <p class="nl-meta">
-        {{ item.source }}{% if item.date_label %} · {{ item.date_label }}{% endif %}{% if item.brand %} · {{ item.brand }}{% endif %}{% if item.sector %} · {{ item.sector }}{% endif %}
-      </p>
+      <p class="nl-meta">{{ item.source }}{% if item.date_label %} · {{ item.date_label }}{% endif %}</p>
       {% if item.opportunity %}<p><span class="nl-badge">{{ opportunity_label }}</span></p>{% endif %}
       {% if item.excerpt %}<p class="nl-excerpt">{{ item.excerpt }}</p>{% endif %}
       {% if medium == "email" %}<p><a class="nl-more" href="{{ item.url }}">Lire l'article</a></p>{% endif %}

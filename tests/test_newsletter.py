@@ -15,7 +15,7 @@ from PIL import Image
 
 from news_franchise.config import Settings
 from news_franchise.models import Article, Franchisee, Meeting, Newsletter, Opening
-from news_franchise.newsletter import qr
+from news_franchise.newsletter import qr, shapes
 from news_franchise.newsletter.dates import format_day, format_month
 from news_franchise.newsletter.theme import (
     THEME_FILE,
@@ -54,11 +54,16 @@ def write_theme(tmp_path: Path, **overrides: str) -> Path:
     Image.new("RGB", (60, 20), (29, 53, 87)).save(logo)
     text = THEME_FILE.read_text(encoding="utf-8")
     logo_value = overrides.pop("logo", logo.as_posix())
-    text = text.replace("logo: config/assets/logo-provisoire.png", f"logo: {logo_value}")
+    text = text.replace("logo: config/assets/logo-carmila.png", f"logo: {logo_value}")
+    text = text.replace(
+        "logo_reverse: config/assets/logo-carmila-blanc.png", f"logo_reverse: {logo.as_posix()}"
+    )
     for key, value in overrides.items():
         section, _, name = key.rpartition(".")
-        text = re.sub(rf"(\n  {name}: )\"[^\"]*\"", rf'\1"{value}"', text, count=1)
-        assert section in ("colors", "fonts")
+        assert section in ("colors", "fonts", "section_colors")
+        pattern = rf"(\n{section}:\n(?:  .*\n|\s*#.*\n)*?  {name}: )\"[^\"]*\""
+        text, count = re.subn(pattern, rf'\1"{value}"', text, count=1)
+        assert count == 1, key
     path = tmp_path / "theme.yaml"
     path.write_text(text, encoding="utf-8")
     return path
@@ -68,7 +73,9 @@ def test_default_theme_loads() -> None:
     theme = load_theme()
     assert theme.colors["background"] == "#FFFFFF"
     assert re.fullmatch(r"#[0-9A-F]{6}", theme.colors["primary"])
-    assert theme.logo.is_file()
+    assert theme.logo.is_file() and theme.logo_reverse.is_file()
+    assert theme.logo_alt == "Carmila"
+    assert set(theme.section_colors) == set(theme.section_titles)
     assert set(theme.section_titles) == {"une", *(f"rubrique_{n}" for n in range(1, 7))}
     assert theme.font_body.endswith("sans-serif")
     assert theme.warnings() == []
@@ -97,14 +104,66 @@ def test_low_contrast_is_a_warning_not_an_error(tmp_path: Path) -> None:
     theme = load_theme(path, project_dir=tmp_path)  # non bloquant
     assert round(contrast_ratio("#777777", "#FFFFFF"), 2) == 4.48
     warnings = theme.warnings()
-    assert len(warnings) == 1
+    # Sur le fond blanc (4,48:1) et sur les encadrés crème (3,98:1).
+    assert len(warnings) == 2
     assert "Texte secondaire sur le fond" in warnings[0] and "4,48:1" in warnings[0]
+    assert "Texte secondaire sur les encadrés" in warnings[1]
+
+
+def test_large_text_uses_the_3_to_1_minimum(tmp_path: Path) -> None:
+    # Blanc sur le rouge Carmila : 3,8:1, suffisant pour le grand texte du bandeau.
+    assert round(contrast_ratio("#FFFFFF", "#EF4050"), 1) == 3.8
+    assert load_theme().warnings() == []
+    # Un rouge plus clair passe sous 3:1 : avertissement.
+    path = write_theme(tmp_path, **{"colors.primary": "#FF8A95"})
+    warnings = load_theme(path, project_dir=tmp_path).warnings()
+    assert any("bandeau" in w and "minimum conseillé 3:1" in w for w in warnings)
+
+
+def test_section_number_color_is_the_most_readable() -> None:
+    theme = load_theme()
+    assert theme.accent("rubrique_1").on_color == "#FFFFFF"  # sur rouge
+    assert theme.accent("rubrique_3").on_color == "#004D46"  # sur orange clair
+    assert all(check.ok for check in theme.contrast_checks())
+
+
+def test_invalid_section_color_and_missing_font(tmp_path: Path) -> None:
+    path = write_theme(tmp_path, **{"section_colors.rubrique_2": "turquoise"})
+    with pytest.raises(ThemeError, match=r"section_colors\.rubrique_2"):
+        load_theme(path, project_dir=tmp_path)
+    path = write_theme(tmp_path)
+    path.write_text(
+        re.sub(r"\n  labels: .*", "", path.read_text(encoding="utf-8")), encoding="utf-8"
+    )
+    with pytest.raises(ThemeError, match="fonts.labels"):
+        load_theme(path, project_dir=tmp_path)
 
 
 def test_theme_css_variables_come_from_theme() -> None:
     css = load_theme().css_variables()
-    assert "--nf-primary: #1D3557;" in css
-    assert "--nf-font-body: Arial, Helvetica, sans-serif;" in css
+    assert "--nf-primary: #EF4050;" in css
+    assert "--nf-opportunity-text: #004D46;" in css
+    assert "--nf-font-body: 'Century Gothic'," in css
+    assert "--nf-font-labels: 'Bahnschrift Condensed'," in css
+
+
+@pytest.mark.parametrize("kind", shapes.SHAPES)
+def test_shapes_are_valid_svg(kind: str) -> None:
+    root = ET.fromstring(shapes.shape_svg(kind, "#EF4050"))
+    assert root.tag == f"{SVG_NS}svg" and root.get("aria-hidden") == "true"
+    assert root.find(f"{SVG_NS}path").get("fill") == "#EF4050"  # type: ignore[union-attr]
+
+
+def test_motif_is_valid_svg_with_diagonal_edge() -> None:
+    svg = shapes.motif_svg("#FFFFFF", columns=4, rows=4)
+    root = ET.fromstring(svg)
+    path = root.find(f"{SVG_NS}path")
+    assert path is not None
+    # Colonnes de 1, 2, 3 puis 4 formes (bord en diagonale) : 10 formes, dont 3 nœuds
+    # dessinés chacun en deux sous-chemins.
+    assert path.get("d", "").count("M") == 10 + 3
+    with pytest.raises(ValueError):
+        shapes.shape_path("cercle", 0, 0, 10)
 
 
 # --------------------------------------------------------------------------- dates
@@ -358,6 +417,12 @@ def test_preview_of_demo_month(demo_client: FlaskClient, settings: Settings) -> 
     ):
         assert title in html
     assert "Janvier 2000" in html
+    # Charte : bandeau avec logo en réserve blanche et motif, logo couleur en pied de page,
+    # rubriques numérotées sur deux chiffres (renumérotées sans trou).
+    assert 'src="/theme/logo/blanc"' in html and 'src="/theme/logo"' in html
+    assert 'class="nl-motif"' in html
+    numbers = re.findall(r'class="nl-section-number">(\d+)<', html)
+    assert numbers == ["01", "02", "03", "04", "05"]
     # Aucun franchisé validé dans la démo : rubrique masquée.
     assert 'id="rubrique-5"' not in html
     # Un QR code par article, juste sous son titre.
@@ -420,7 +485,10 @@ def test_preview_with_invalid_theme(app: Flask, demo_client: FlaskClient, tmp_pa
 
 def test_theme_screen(client: FlaskClient) -> None:
     html = _html(client.get("/theme"))
-    assert "#1D3557" in html and "Arial, Helvetica, sans-serif" in html
+    assert "#EF4050" in html and "Century Gothic" in html and "Bahnschrift" in html
+    assert "minimum" in html.lower()
+    assert client.get("/theme/logo/blanc").status_code == 200
+    assert client.get("/theme/logo/autre").status_code == 404
     assert "Tous les contrastes vérifiés" in html
     assert "theme.yaml" in html
     assert client.get("/theme/logo").status_code == 200

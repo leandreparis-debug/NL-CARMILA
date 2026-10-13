@@ -1,5 +1,9 @@
-{# Bandeau de rubrique : numéro affiché (sans trou) et titre (config/theme.yaml). #}
-<h2 class="nl-section-title">
-  <span class="nl-section-number">{{ section.display_number }}</span>
-  {{ section.title }}
-</h2>
+{# En-tête de rubrique : numéro sur deux chiffres dans une arche de la couleur d'accent,
+   titre (config/theme.yaml) et filet court, comme les titres de la charte. #}
+<header class="nl-section-head">
+  <span class="nl-section-number">{{ section.number_label }}</span>
+  <div>
+    <h2 class="nl-section-title">{{ section.title }}</h2>
+    <span class="nl-rule"></span>
+  </div>
+</header>

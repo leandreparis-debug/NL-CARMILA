@@ -15,9 +15,21 @@ from news_franchise.fonts import system_font
 
 THEME_FILE = PROJECT_DIR / "config" / "theme.yaml"
 PROVISIONAL_LOGO = PROJECT_DIR / "config" / "assets" / "logo-provisoire.png"
-COLOR_KEYS = ("primary", "secondary", "text", "muted", "background", "border", "opportunity")
+COLOR_KEYS = (
+    "primary",
+    "secondary",
+    "text",
+    "muted",
+    "background",
+    "surface",
+    "border",
+    "opportunity",
+    "opportunity_text",
+)
 SECTION_KEYS = ("une", *(f"rubrique_{n}" for n in range(1, 7)))
-MIN_CONTRAST = 4.5
+FONT_KEYS = ("body", "headings", "labels")
+MIN_CONTRAST = 4.5  # WCAG AA, texte courant
+MIN_CONTRAST_LARGE = 3.0  # WCAG AA, grand texte (≥ 24 px, ou ≥ 19 px en gras)
 _HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 # Pile de polices : noms de polices séparés par des virgules (lettres, chiffres, espaces,
 # tirets, guillemets) ; rien qui permette d'injecter du CSS ou une police en ligne.
@@ -31,22 +43,42 @@ class ThemeError(ConfigError):
 
 @dataclass(frozen=True)
 class ContrastCheck:
-    """Contrôle de contraste entre deux couleurs du thème."""
+    """Contrôle de contraste entre deux couleurs du thème (minimum : 4,5:1 pour le texte
+    courant, 3:1 pour le grand texte)."""
 
     label: str
     foreground: str
     background: str
     ratio: float
+    minimum: float = MIN_CONTRAST
 
     @property
     def ok(self) -> bool:
-        """Vrai si le contraste atteint 4,5:1 (WCAG AA, texte courant)."""
-        return self.ratio >= MIN_CONTRAST
+        """Vrai si le contraste atteint le minimum (WCAG AA)."""
+        return self.ratio >= self.minimum
 
     @property
     def ratio_label(self) -> str:
         """Ratio arrondi, à la française (« 4,48:1 »)."""
-        return f"{self.ratio:.2f}".replace(".", ",") + ":1"
+        return _ratio_label(self.ratio)
+
+    @property
+    def minimum_label(self) -> str:
+        """Minimum à la française (« 4,5:1 », « 3:1 »)."""
+        return f"{self.minimum:g}".replace(".", ",") + ":1"
+
+
+def _ratio_label(ratio: float) -> str:
+    """« 4,48:1 »."""
+    return f"{ratio:.2f}".replace(".", ",") + ":1"
+
+
+@dataclass(frozen=True)
+class SectionAccent:
+    """Couleur d'accent d'une rubrique et couleur du numéro écrit dessus."""
+
+    color: str
+    on_color: str
 
 
 @dataclass(frozen=True)
@@ -56,46 +88,91 @@ class Theme:
     name: str
     tagline: str
     colors: dict[str, str]
+    section_colors: dict[str, str]
     font_body: str
     font_headings: str
+    font_labels: str
     logo: Path
+    logo_reverse: Path
+    logo_alt: str  # texte alternatif des logos (lu par les lecteurs d'écran)
     footer_text: str
     section_titles: dict[str, str]
     source: Path
 
-    def contrast_checks(self) -> list[ContrastCheck]:
-        """Contrastes vérifiés : texte, texte secondaire, couleur principale et badge sur
-        le fond ; texte des bandeaux (couleur du fond, blanc) sur la couleur principale.
-
-        Les gabarits n'écrivent jamais la couleur « text » sur la couleur principale : sur un
-        bandeau de couleur principale, le texte prend la couleur du fond."""
-        c = self.colors
-        pairs = (
-            ("Texte sur le fond", c["text"], c["background"]),
-            ("Texte secondaire sur le fond", c["muted"], c["background"]),
-            ("Titres et liens (couleur principale) sur le fond", c["primary"], c["background"]),
-            ("Texte des bandeaux sur la couleur principale", c["background"], c["primary"]),
-            ("Badge opportunité sur le fond", c["opportunity"], c["background"]),
+    def accent(self, key: str) -> SectionAccent:
+        """Accent de la rubrique (une, rubrique_1…) : le numéro est écrit dans la couleur
+        (fond blanc ou vert foncé « secondary ») qui contraste le mieux avec l'accent."""
+        color = self.section_colors[key]
+        on_color = max(
+            (self.colors["background"], self.colors["secondary"]),
+            key=lambda candidate: contrast_ratio(candidate, color),
         )
-        return [ContrastCheck(label, fg, bg, contrast_ratio(fg, bg)) for label, fg, bg in pairs]
+        return SectionAccent(color, on_color)
+
+    def contrast_checks(self) -> list[ContrastCheck]:
+        """Contrastes vérifiés, tels que les gabarits utilisent les couleurs.
+
+        Texte courant (4,5:1) : texte et texte secondaire sur le fond et sur les encadrés,
+        titres et liens (secondary) sur le fond, badge opportunité. Grand texte (3:1) : nom
+        et mois écrits dans la couleur du fond sur le bandeau (primary), numéros des
+        rubriques sur leur couleur d'accent. La couleur principale n'est jamais utilisée
+        pour du petit texte."""
+        c = self.colors
+        checks = [
+            ContrastCheck(label, fg, bg, contrast_ratio(fg, bg), minimum)
+            for label, fg, bg, minimum in (
+                ("Texte sur le fond", c["text"], c["background"], MIN_CONTRAST),
+                ("Texte sur les encadrés", c["text"], c["surface"], MIN_CONTRAST),
+                ("Texte secondaire sur le fond", c["muted"], c["background"], MIN_CONTRAST),
+                ("Texte secondaire sur les encadrés", c["muted"], c["surface"], MIN_CONTRAST),
+                ("Titres et liens sur le fond", c["secondary"], c["background"], MIN_CONTRAST),
+                (
+                    "Badge opportunité",
+                    c["opportunity_text"],
+                    c["opportunity"],
+                    MIN_CONTRAST,
+                ),
+                (
+                    "Grand texte du bandeau sur la couleur principale",
+                    c["background"],
+                    c["primary"],
+                    MIN_CONTRAST_LARGE,
+                ),
+            )
+        ]
+        for key in SECTION_KEYS:
+            accent = self.accent(key)
+            label = "Une" if key == "une" else f"rubrique {key.removeprefix('rubrique_')}"
+            checks.append(
+                ContrastCheck(
+                    f"Numéro sur la couleur d'accent ({label})",
+                    accent.on_color,
+                    accent.color,
+                    contrast_ratio(accent.on_color, accent.color),
+                    MIN_CONTRAST_LARGE,
+                )
+            )
+        return checks
 
     def css_variables(self) -> str:
         """Déclarations CSS « --nf-… » du thème, pour un bloc :root { … }.
 
         Sans risque d'injection : couleurs (#RRGGBB) et polices (lettres, chiffres, espaces,
         virgules, tirets, guillemets) ont été validées au chargement."""
-        lines = [f"--nf-{key}: {value};" for key, value in self.colors.items()]
+        lines = [f"--nf-{key.replace('_', '-')}: {value};" for key, value in self.colors.items()]
         lines += [
             f"--nf-font-body: {self.font_body};",
             f"--nf-font-headings: {self.font_headings};",
+            f"--nf-font-labels: {self.font_labels};",
         ]
         return " ".join(lines)
 
     def warnings(self) -> list[str]:
-        """Avertissements (non bloquants) pour les contrastes inférieurs à 4,5:1."""
+        """Avertissements (non bloquants) pour les contrastes sous le minimum."""
         return [
             f"Contraste insuffisant — {check.label} : {check.ratio_label} "
-            f"({check.foreground} sur {check.background}, minimum conseillé 4,5:1)."
+            f"({check.foreground} sur {check.background}, minimum conseillé "
+            f"{check.minimum_label})."
             for check in self.contrast_checks()
             if not check.ok
         ]
@@ -157,11 +234,44 @@ def _font_stack(value: Any, key: str, where: str) -> str:
     return stack
 
 
+def _color(data: dict[str, Any], key: str, block: str, where: str) -> str:
+    """Couleur #RRGGBB obligatoire, renvoyée en majuscules."""
+    value = data.get(key)
+    if not isinstance(value, str) or not _HEX.match(value.strip()):
+        raise ThemeError(
+            f"{where} : la couleur « {block}.{key} » doit être au format #RRGGBB "
+            f"(ex. #EF4050) ; valeur lue : {value!r}."
+        )
+    return value.strip().upper()
+
+
+def _image(data: dict[str, Any], key: str, where: str, project_dir: Path) -> Path:
+    """Fichier image PNG ou JPEG existant (chemin relatif au dossier du projet).
+
+    Le logo provisoire (config/assets/logo-provisoire.png) est recréé s'il manque."""
+    value = _text(data, key, where, max_length=300)
+    path = Path(value)
+    path = path if path.is_absolute() else project_dir / path
+    if not path.is_file() and path.resolve() == PROVISIONAL_LOGO.resolve():
+        generate_provisional_logo(path)
+    if not path.is_file():
+        raise ThemeError(f"{where} : {key} introuvable : {value} (cherché dans {path}).")
+    try:
+        with Image.open(path) as image:
+            if image.format not in ("PNG", "JPEG"):
+                raise ThemeError(f"{where} : « {key} » doit être une image PNG ou JPEG.")
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ThemeError(f"{where} : « {key} » ({value}) n'est pas une image lisible.") from exc
+    return path
+
+
 def load_theme(path: Path = THEME_FILE, project_dir: Path = PROJECT_DIR) -> Theme:
     """Lit et valide le thème. Lève ThemeError avec un message clair en cas de problème.
 
-    Le logo provisoire (config/assets/logo-provisoire.png) est créé s'il manque ; tout
-    autre logo introuvable est une erreur.
+    Contrôle les couleurs (#RRGGBB), les polices (système uniquement), les logos (fichiers
+    PNG ou JPEG existants ; le logo provisoire config/assets/logo-provisoire.png est créé
+    s'il manque) et les titres des rubriques. Les contrastes insuffisants ne sont pas des
+    erreurs : voir Theme.warnings().
     """
     where = path.name
     if not path.is_file():
@@ -182,31 +292,19 @@ def load_theme(path: Path = THEME_FILE, project_dir: Path = PROJECT_DIR) -> Them
         raise ThemeError(f"{where} : le bloc « colors: » est absent ou invalide.")
     checked_colors: dict[str, str] = {}
     for key in COLOR_KEYS:
-        value = colors.get(key)
-        if not isinstance(value, str) or not _HEX.match(value.strip()):
-            raise ThemeError(
-                f"{where} : la couleur « colors.{key} » doit être au format #RRGGBB "
-                f"(ex. #1D3557) ; valeur lue : {value!r}."
-            )
-        checked_colors[key] = value.strip().upper()
+        checked_colors[key] = _color(colors, key, "colors", where)
+
+    section_colors_data = data.get("section_colors")
+    if not isinstance(section_colors_data, dict):
+        raise ThemeError(f"{where} : le bloc « section_colors: » est absent ou invalide.")
+    section_colors = {
+        key: _color(section_colors_data, key, "section_colors", where) for key in SECTION_KEYS
+    }
 
     fonts = data.get("fonts")
     if not isinstance(fonts, dict):
         raise ThemeError(f"{where} : le bloc « fonts: » est absent ou invalide.")
-
-    logo_value = _text(data, "logo", where, max_length=300)
-    logo = Path(logo_value)
-    logo = logo if logo.is_absolute() else project_dir / logo
-    if not logo.is_file() and logo.resolve() == PROVISIONAL_LOGO.resolve():
-        generate_provisional_logo(logo)
-    if not logo.is_file():
-        raise ThemeError(f"{where} : logo introuvable : {logo_value} (cherché dans {logo}).")
-    try:
-        with Image.open(logo) as image:
-            if image.format not in ("PNG", "JPEG"):
-                raise ThemeError(f"{where} : le logo doit être une image PNG ou JPEG.")
-    except (UnidentifiedImageError, OSError) as exc:
-        raise ThemeError(f"{where} : le logo {logo_value} n'est pas une image lisible.") from exc
+    font_stacks = {key: _font_stack(fonts.get(key), key, where) for key in FONT_KEYS}
 
     titles = data.get("section_titles")
     if not isinstance(titles, dict):
@@ -215,13 +313,19 @@ def load_theme(path: Path = THEME_FILE, project_dir: Path = PROJECT_DIR) -> Them
         key: _text(titles, key, f"{where}, section_titles", max_length=80) for key in SECTION_KEYS
     }
 
+    name = _text(data, "name", where, max_length=80)
+    logo_alt = _text(data, "logo_alt", where, max_length=80) if data.get("logo_alt") else name
     return Theme(
-        name=_text(data, "name", where, max_length=80),
+        name=name,
+        logo_alt=logo_alt,
         tagline=_text(data, "tagline", where),
         colors=checked_colors,
-        font_body=_font_stack(fonts.get("body"), "body", where),
-        font_headings=_font_stack(fonts.get("headings"), "headings", where),
-        logo=logo,
+        section_colors=section_colors,
+        font_body=font_stacks["body"],
+        font_headings=font_stacks["headings"],
+        font_labels=font_stacks["labels"],
+        logo=_image(data, "logo", where, project_dir),
+        logo_reverse=_image(data, "logo_reverse", where, project_dir),
         footer_text=_text(data, "footer_text", where, max_length=300),
         section_titles=section_titles,
         source=path,

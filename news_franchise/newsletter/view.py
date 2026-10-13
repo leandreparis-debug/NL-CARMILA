@@ -133,6 +133,11 @@ class Section:
         return f"rubrique-{self.number}"
 
     @property
+    def number_label(self) -> str:
+        """Numéro affiché sur deux chiffres, comme dans la charte (« 01 ») ; vide si masquée."""
+        return f"{self.display_number:02d}" if self.display_number is not None else ""
+
+    @property
     def count(self) -> int:
         """Nombre d'éléments publiés."""
         return len(self.items)
@@ -152,6 +157,12 @@ class TocEntry:
     anchor: str
     count: int
     count_label: str
+    key: str = ""  # rubrique_1 … rubrique_6
+
+    @property
+    def number_label(self) -> str:
+        """Numéro sur deux chiffres (« 01 »)."""
+        return f"{self.number:02d}"
 
 
 @dataclass(frozen=True)
@@ -327,7 +338,7 @@ def build_newsletter_view(
         ),
     )
     toc = tuple(
-        TocEntry(s.display_number, s.title, s.anchor, s.count, _items_label(s.count, s.kind))
+        TocEntry(s.display_number, s.title, s.anchor, s.count, _items_label(s.count, s.kind), s.key)
         for s in sections
         if s.display_number is not None
     )

@@ -1,76 +1,97 @@
-# Thème de la newsletter : appliquer la charte Carmila
+# Thème de la newsletter : la charte Carmila
 
 Toute la charte graphique de la newsletter tient dans un seul fichier :
 **`config/theme.yaml`**. Les gabarits (`news_franchise/templates/newsletter/_*.html`) et la
 feuille de style (`news_franchise/static/newsletter.css`) n'utilisent que ces valeurs : il
 n'y a rien d'autre à modifier pour changer l'apparence.
 
-Les valeurs livrées sont **provisoires** (bleu marine sobre, Arial, logo texte généré) et
-marquées « À remplacer par la charte Carmila » dans le fichier.
+Le thème applique la charte **« Les fondamentaux de la marque Carmila » (avril 2023)**.
 
-## Valeurs à changer
+## Ce qui vient de la charte
+
+| Élément | Charte | Dans la newsletter |
+| --- | --- | --- |
+| Couleurs (p. 11) | rouge `#EF4050` et jaune `#FFCC32` (identitaires) ; turquoise `#60C3AD`, orange `#FEC46F` (principales) ; crème `#FFF1E2`, vert foncé `#004D46`, bleu `#5192BB`, gris `#58595B` (secondaires) | bandeau rouge ; titres et liens en vert foncé ; texte en gris ; encadrés crème ; badge opportunité jaune ; une couleur d'accent par rubrique |
+| Typographie (p. 13-15) | Josefin Sans (principale), Oswald (encadrés, chiffres), **Century Gothic** comme police système de substitution | texte et titres : Century Gothic ; chiffres et petits libellés : Bahnschrift Condensed, équivalent système d'Oswald (voir plus bas) |
+| Logotype (p. 8-10) | version couleurs à privilégier ; réserve blanche uniquement sur une couleur de la palette ; pas de cadre ni de déformation | logo blanc sur le bandeau rouge ; logo couleurs en bas, centré (p. 27) |
+| Formes et motif (p. 21-22) | arche, nœud (deux demi-disques) et heptagone ; motif dans un angle, bord en diagonale | motif blanc dans l'angle du bandeau ; numéros des rubriques dans une arche ; formes devant les chiffres de la Une et dans le sommaire |
+| Mix photo / forme (p. 23) | photo associée à une forme | photo principale des ouvertures découpée en arche |
+| Titres (toute la charte) | capitales, filet court, numérotation « 01. » | titres de rubrique en capitales avec filet court, numéros « 01 » |
+
+### Pourquoi pas Josefin Sans et Oswald ?
+
+Ce sont des polices Google Fonts, donc téléchargées en ligne : interdit ici (Gmail et
+l'impression doivent rendre la même chose sur tous les postes). La charte prévoit elle-même
+**Century Gothic** comme substitution (p. 15) ; elle est installée avec Microsoft Office.
+Pour Oswald (condensée), l'équivalent système le plus proche est **Bahnschrift Condensed**,
+fournie avec Windows 10 et 11. Sur un poste sans ces polices, les replis prennent le relais
+(URW Gothic, Trebuchet MS, Arial ; Arial Narrow).
+
+### Contrastes : où va chaque couleur
+
+Le rouge Carmila ne contraste pas assez avec le blanc pour du petit texte (3,8:1, minimum
+4,5:1). Il est donc réservé au **grand texte** (nom et mois du bandeau, numéros des
+rubriques : minimum 3:1) et aux éléments graphiques (bandeau, filets, formes). Les titres et
+les liens sont en **vert foncé** (9,77:1), le texte en **gris charte** (7,01:1). Le turquoise,
+l'orange et le jaune servent de fond aux formes ; le numéro écrit dessus prend
+automatiquement la couleur la plus lisible (blanc ou vert foncé).
+
+## Valeurs modifiables
 
 | Clé | Rôle | Format |
 | --- | --- | --- |
-| `name` | Nom affiché (texte alternatif du logo, pied de page) | texte, 80 caractères au plus |
-| `tagline` | Phrase sous le logo | texte |
-| `colors.primary` | Titres, liens, bandeaux de rubrique, chiffres de la Une | `#RRGGBB` |
-| `colors.secondary` | Filets sous l'en-tête et au-dessus du pied de page | `#RRGGBB` |
+| `name` | Nom affiché dans le bandeau | texte, 80 caractères au plus |
+| `tagline` | Phrase sous le bandeau | texte |
+| `colors.primary` | Bandeau, filets, grands éléments (jamais de petit texte) | `#RRGGBB` |
+| `colors.secondary` | Titres, liens, chiffres de la Une | `#RRGGBB` |
 | `colors.text` | Texte courant | `#RRGGBB` |
-| `colors.muted` | Texte secondaire : sources, dates, légendes | `#RRGGBB` |
-| `colors.background` | Fond de la newsletter ; **à laisser blanc** (`#FFFFFF`) pour l'impression et l'e-mail | `#RRGGBB` |
-| `colors.border` | Bordures et séparateurs | `#RRGGBB` |
-| `colors.opportunity` | Badge « Opportunité emplacements » | `#RRGGBB` |
-| `fonts.body` / `fonts.headings` | Polices du texte et des titres | liste de polices **système**, terminée par `sans-serif`, `serif` ou `monospace` |
-| `logo` | Logo en tête de la newsletter | chemin d'un PNG ou JPEG, relatif au dossier du projet |
+| `colors.muted` | Sources, dates, légendes | `#RRGGBB` |
+| `colors.background` | Fond ; **à laisser blanc** (`#FFFFFF`) ; aussi la couleur du texte du bandeau | `#RRGGBB` |
+| `colors.surface` | Fond des encadrés (Une, rencontres, plans) | `#RRGGBB` |
+| `colors.border` | Séparateurs fins | `#RRGGBB` |
+| `colors.opportunity` / `opportunity_text` | Fond et texte du badge « Opportunité emplacements » | `#RRGGBB` |
+| `section_colors.*` | Couleur d'accent de la Une et de chaque rubrique | `#RRGGBB` |
+| `fonts.body` / `headings` / `labels` | Texte, titres, chiffres et petits libellés | polices **système**, liste terminée par `sans-serif`, `serif` ou `monospace` |
+| `logo` | Logo couleurs, pour fond blanc (pied de page) | PNG ou JPEG, chemin relatif au dossier du projet |
+| `logo_reverse` | Logo en réserve blanche, pour le bandeau | PNG ou JPEG (de préférence PNG transparent) |
+| `logo_alt` | Texte alternatif des logos | texte |
 | `footer_text` | Texte du pied de page | texte, 300 caractères au plus |
 | `section_titles.*` | Titre de la Une et des 6 rubriques | texte, 80 caractères au plus |
 
 Notes :
 
 - **Couleurs** : toujours 6 chiffres hexadécimaux précédés de `#`, entre guillemets
-  (`"#E2001A"`). Les formats courts (`#E00`) ou les noms (`red`) sont refusés.
-- **Polices** : uniquement des polices installées sur les postes (Arial, Helvetica,
-  Verdana, Georgia, « Segoe UI »…). Pas de police téléchargée : Gmail et l'impression
-  doivent rendre la même chose partout. Si la charte impose une police propriétaire,
-  choisissez la police système la plus proche. Les noms à espaces se mettent entre
-  apostrophes : `"'Segoe UI', Arial, sans-serif"`.
-- **Logo** : déposez le fichier dans `config/assets/` (par exemple
-  `config/assets/logo-carmila.png`), puis indiquez `logo: config/assets/logo-carmila.png`.
-  Format conseillé : PNG sur fond transparent ou blanc, environ 600 × 120 px ; il est
-  affiché au plus à 360 × 80 px. Le logo provisoire (`config/assets/logo-provisoire.png`)
-  est recréé automatiquement s'il est supprimé ; tout autre logo introuvable est une
-  erreur.
+  (`"#EF4050"`). Les formats courts (`#E00`) ou les noms (`red`) sont refusés.
+- **Polices** : uniquement des polices installées sur les postes. Les noms à espaces se
+  mettent entre apostrophes : `"'Century Gothic', Arial, sans-serif"`.
+- **Logos** : `config/assets/logo-carmila.png` et `config/assets/logo-carmila-blanc.png`
+  ont été extraits de la charte (p. 8 et p. 1), sur fond transparent, aux couleurs
+  `#EF4050` et `#FFCC32`. Si la communication fournit les fichiers officiels, déposez-les
+  dans `config/assets/` sous le même nom (ou changez `logo` / `logo_reverse`). Taille
+  d'affichage : 170 px de large dans le bandeau, 120 px en pied de page (au-dessus des
+  10 mm minimum de la charte).
 
-## Vérifier
+## Vérifier après une modification
 
 1. Enregistrez `config/theme.yaml` (encodage UTF-8).
 2. Ouvrez l'écran **Thème** depuis la page d'accueil (inutile de relancer l'application :
    le fichier est relu à chaque affichage).
 3. En cas d'erreur, le message indique la clé fautive et la valeur lue, par exemple :
-   « la couleur « colors.primary » doit être au format #RRGGBB (ex. #1D3557) ; valeur
-   lue : '#12' » ou « logo introuvable : config/assets/logo-carmila.png ».
-4. Lisez le tableau **Contrastes** : chaque association doit atteindre **4,5:1** (niveau
-   WCAG AA pour le texte courant). En dessous, un avertissement s'affiche (non bloquant :
-   l'aperçu reste disponible, mais le texte sera difficile à lire, surtout imprimé).
-5. Ouvrez l'**Aperçu** d'un mois (par exemple la démonstration, janvier 2000) pour juger
-   le rendu.
+   « la couleur « colors.primary » doit être au format #RRGGBB (ex. #EF4050) ; valeur
+   lue : '#12' » ou « logo introuvable : config/assets/logo.png ».
+4. Lisez le tableau **Contrastes** : chaque ligne indique son minimum (4,5:1 pour le texte
+   courant, 3:1 pour le grand texte, WCAG AA). En dessous, un avertissement s'affiche (non
+   bloquant : l'aperçu reste disponible, mais le texte sera difficile à lire, surtout
+   imprimé). Exemple : un gris `#777777` sur blanc donne 4,48:1, juste sous le minimum.
+5. Ouvrez l'**Aperçu** d'un mois (par exemple la démonstration, janvier 2000).
 
 ## Contrastes vérifiés
 
-| Association | Pourquoi |
+| Association | Minimum |
 | --- | --- |
-| Texte sur le fond | texte courant |
-| Texte secondaire sur le fond | sources, dates, légendes |
-| Titres et liens (couleur principale) sur le fond | titres d'articles, liens, chiffres de la Une |
-| Texte des bandeaux sur la couleur principale | les titres de rubrique sont écrits dans la couleur du fond (blanc) sur un bandeau de couleur principale |
-| Badge opportunité sur le fond | badge « Opportunité emplacements » |
-
-La couleur `text` n'est jamais écrite sur la couleur principale : c'est pourquoi cette
-association n'est pas vérifiée. Exemple de seuil : un gris `#777777` sur blanc donne
-4,48:1, juste en dessous du minimum ; `#5B6573` (valeur provisoire) donne 5,91:1.
-
-Si la couleur principale de la charte est claire (jaune, rouge vif…), le contraste des
-titres sur fond blanc et celui des bandeaux seront probablement insuffisants : prenez une
-variante plus foncée de la couleur pour `primary` et gardez la couleur vive pour
-`secondary` (filets).
+| Texte sur le fond, et sur les encadrés | 4,5:1 |
+| Texte secondaire sur le fond, et sur les encadrés | 4,5:1 |
+| Titres et liens (`secondary`) sur le fond | 4,5:1 |
+| Badge opportunité (texte sur son fond) | 4,5:1 |
+| Grand texte du bandeau (couleur du fond) sur la couleur principale | 3:1 |
+| Numéro de chaque rubrique sur sa couleur d'accent | 3:1 |

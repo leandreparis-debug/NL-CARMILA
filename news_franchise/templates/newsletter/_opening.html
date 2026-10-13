@@ -1,5 +1,5 @@
-{# Ouverture (rubrique 3) avec sa photo principale ; les autres photos en vignettes si
-   show_other_photos (choix de la sortie, selon la place disponible). #}
+{# Ouverture (rubrique 3) : photo principale en arche (forme de la charte) ; les autres
+   photos en vignettes si show_other_photos (choix de la sortie, selon la place). #}
 <article class="nl-opening">
   {% if item.main_photo %}
     <figure class="nl-photo">
@@ -9,7 +9,8 @@
   {% endif %}
   <div class="nl-opening-text">
     <h3 class="nl-item-title">{{ item.brand }}</h3>
-    <p class="nl-meta">{{ item.location }}{% if item.date_label %} · ouverture le {{ item.date_label }}{% endif %}</p>
+    <p class="nl-meta">{{ item.location }}</p>
+    {% if item.date_label %}<p class="nl-date">Ouverture le {{ item.date_label }}</p>{% endif %}
     {% if item.description %}<p>{{ item.description }}</p>{% endif %}
     {% if show_other_photos and item.other_photos %}
       <div class="nl-thumbs">

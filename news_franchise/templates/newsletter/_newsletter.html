@@ -1,18 +1,25 @@
 {# Corps de la newsletter, commun à l'aperçu et aux exports.
    Variables : view (NewsletterView), theme, medium ("email" ou "print"), qr, photo_src,
-   logo_src, opportunity_label. Aucune logique métier ici : tout est préparé en Python. #}
+   logo_src, logo_reverse_src, accents, icons, front_icons, motif, opportunity_label,
+   show_other_photos. Aucune logique métier ici : tout est préparé en Python. #}
 <div class="nl nl-{{ medium }}">
   <header class="nl-header">
-    <img class="nl-logo" src="{{ logo_src }}" alt="{{ theme.name }}">
+    <div class="nl-band">
+      <div class="nl-motif-wrap">{{ motif }}</div>
+      <img class="nl-logo" src="{{ logo_reverse_src }}" alt="{{ theme.logo_alt }}">
+      <p class="nl-title">{{ theme.name }}</p>
+      <p class="nl-month">{{ view.month_label }}</p>
+      <span class="nl-band-rule"></span>
+    </div>
     <p class="nl-tagline">{{ theme.tagline }}</p>
-    <p class="nl-month">{{ view.month_label }}</p>
   </header>
 
   {% include "newsletter/_une.html" %}
   {% include "newsletter/_sommaire.html" %}
 
   {% for section in view.visible_sections %}
-    <section class="nl-section" id="{{ section.anchor }}">
+    {% set accent = accents[section.key] %}
+    <section class="nl-section" id="{{ section.anchor }}" style="--accent: {{ accent.color }}; --on-accent: {{ accent.on_color }};">
       {% include "newsletter/_section_header.html" %}
       {% if section.kind == "articles" %}
         {% for item in section.items %}{% include "newsletter/_article.html" %}{% endfor %}
@@ -21,7 +28,9 @@
       {% elif section.kind == "meetings" %}
         {% include "newsletter/_meetings.html" %}
       {% elif section.kind == "franchisees" %}
-        {% for item in section.items %}{% include "newsletter/_franchisee.html" %}{% endfor %}
+        <div class="nl-franchisees">
+          {% for item in section.items %}{% include "newsletter/_franchisee.html" %}{% endfor %}
+        </div>
       {% elif section.kind == "plans" %}
         {% for item in section.items %}{% include "newsletter/_plans.html" %}{% endfor %}
       {% endif %}

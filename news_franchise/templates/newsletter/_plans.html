@@ -1,6 +1,6 @@
 {# Lien vers les plans de développement (rubrique 6). En version imprimée, l'adresse est
    aussi écrite en clair. #}
-<p class="nl-plans">
-  <a class="nl-plans-link" href="{{ item.url }}">{{ item.label }}</a>
-  {% if medium == "print" %}<br><span class="nl-url">{{ item.url }}</span>{% endif %}
-</p>
+<div class="nl-plans">
+  <a class="nl-button" href="{{ item.url }}">{{ item.label }} →</a>
+  {% if medium == "print" %}<p class="nl-url">{{ item.url }}</p>{% endif %}
+</div>

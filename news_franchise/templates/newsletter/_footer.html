@@ -1,5 +1,6 @@
-{# Pied de page (texte de config/theme.yaml). #}
+{# Pied de page : logo en couleurs, en bas et centré (charte), texte de config/theme.yaml. #}
 <footer class="nl-footer">
+  <img class="nl-footer-logo" src="{{ logo_src }}" alt="{{ theme.logo_alt }}">
   <p>{{ theme.footer_text }}</p>
   <p class="nl-footer-month">{{ theme.name }} · {{ view.month_label }}</p>
 </footer>

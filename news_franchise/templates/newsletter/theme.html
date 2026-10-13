@@ -14,7 +14,7 @@
         <ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
       </div>
     {% else %}
-      <p class="flash flash-success">Tous les contrastes vérifiés atteignent au moins 4,5:1.</p>
+      <p class="flash flash-success">Tous les contrastes vérifiés atteignent leur minimum (4,5:1 pour le texte courant, 3:1 pour le grand texte).</p>
     {% endif %}
 
     <h2>Identité</h2>
@@ -22,9 +22,13 @@
       <dt>Nom</dt><dd>{{ theme.name }}</dd>
       <dt>Phrase d'accroche</dt><dd>{{ theme.tagline }}</dd>
       <dt>Pied de page</dt><dd>{{ theme.footer_text }}</dd>
-      <dt>Logo</dt>
+      <dt>Logo (fond blanc)</dt>
       <dd><img class="theme-logo" src="{{ url_for('newsletter.logo') }}" alt="Logo du thème"><br>
         <code>{{ theme.logo }}</code></dd>
+      <dt>Logo en réserve blanche</dt>
+      <dd><span class="theme-logo-band" style="background: {{ theme.colors.primary }}"><img class="theme-logo" src="{{ url_for('newsletter.logo', variant='blanc') }}" alt="Logo du thème en blanc"></span><br>
+        <code>{{ theme.logo_reverse }}</code></dd>
+      <dt>Texte alternatif des logos</dt><dd>{{ theme.logo_alt }}</dd>
     </dl>
 
     <h2>Couleurs</h2>
@@ -38,9 +42,21 @@
       </tbody>
     </table>
 
+    <h2>Couleurs des rubriques</h2>
+    <table class="theme-table">
+      <thead><tr><th scope="col">Rubrique</th><th scope="col">Accent</th><th scope="col">Numéro</th></tr></thead>
+      <tbody>
+        {% for key, accent in accents.items() %}
+          <tr><td>{{ theme.section_titles[key] }}</td><td><code>{{ accent.color }}</code></td>
+            <td><span class="theme-arch" style="background: {{ accent.color }}; color: {{ accent.on_color }}">{{ "Une" if key == "une" else "0" ~ key[-1] }}</span>
+              <code>{{ accent.on_color }}</code></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
     <h2>Contrastes</h2>
     <table class="theme-table">
-      <thead><tr><th scope="col">Association</th><th scope="col">Couleurs</th><th scope="col">Rapport</th><th scope="col">Résultat</th></tr></thead>
+      <thead><tr><th scope="col">Association</th><th scope="col">Couleurs</th><th scope="col">Rapport</th><th scope="col">Minimum</th><th scope="col">Résultat</th></tr></thead>
       <tbody>
         {% for check in checks %}
           <tr>
@@ -48,17 +64,20 @@
             <td><span class="contrast-sample" style="color: {{ check.foreground }}; background: {{ check.background }}">Exemple</span>
               <code>{{ check.foreground }}</code> sur <code>{{ check.background }}</code></td>
             <td>{{ check.ratio_label }}</td>
+            <td>{{ check.minimum_label }}</td>
             <td>{% if check.ok %}<span class="badge badge-on">Conforme</span>{% else %}<span class="badge badge-opp">Insuffisant</span>{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
-    <p class="muted">Minimum conseillé (WCAG AA, texte courant) : 4,5:1.</p>
+    <p class="muted">Minimums WCAG AA : 4,5:1 pour le texte courant, 3:1 pour le grand texte
+      (24 px, ou 19 px en gras : nom et mois du bandeau, numéros des rubriques).</p>
 
     <h2>Polices</h2>
     <dl class="theme-list">
       <dt>Texte</dt><dd><code>{{ theme.font_body }}</code></dd>
       <dt>Titres</dt><dd><code>{{ theme.font_headings }}</code></dd>
+      <dt>Libellés et chiffres</dt><dd><code>{{ theme.font_labels }}</code></dd>
     </dl>
 
     <h2>Titres des rubriques</h2>

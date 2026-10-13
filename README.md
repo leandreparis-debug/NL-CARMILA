@@ -319,22 +319,30 @@ Les QR codes (correction d'erreur M) sont conservés dans `<données>\exports\qr
 un nom tiré de l'empreinte SHA-256 du lien : ils ne sont produits qu'une fois. Un QR code
 n'est produit que pour un lien `http://` ou `https://`.
 
-Ctrl + P depuis l'aperçu donne déjà une impression A4 (la démonstration tient en 4 pages) ; les exports e-mail et A4
+Ctrl + P depuis l'aperçu donne déjà une impression A4 (la démonstration, au-dessus des limites par rubrique, fait 5 pages ; le A4 final de l'étape 10 devra tenir en 4) ; les exports e-mail et A4
 arrivent dans les étapes suivantes et reprendront les mêmes gabarits
 (`news_franchise/templates/newsletter/_*.html`).
 
 ## Thème et charte graphique
 
 Tout ce qui relève de la charte graphique est dans **`config/theme.yaml`** : nom, phrase
-d'accroche, couleurs, polices, logo, pied de page et titres des rubriques. Les valeurs
-actuelles sont **provisoires** et sont à remplacer par la charte Carmila : mode d'emploi
-dans [`docs/theme.md`](docs/theme.md).
+d'accroche, couleurs, couleur de chaque rubrique, polices, logos, pied de page et titres des
+rubriques. Le thème applique la **charte Carmila 2023** (« Les fondamentaux de la
+marque ») : bandeau rouge avec logo en réserve blanche et motif de formes géométriques,
+rubriques numérotées « 01 » dans une arche, encadrés crème, titres en vert foncé, logo
+couleurs en bas et centré. Détail des choix, et comment modifier une valeur :
+[`docs/theme.md`](docs/theme.md).
+
+Polices : la charte utilise Josefin Sans et Oswald, téléchargées en ligne, ce qui est exclu
+ici ; on utilise **Century Gothic**, la substitution prévue par la charte, et
+**Bahnschrift Condensed** (Windows) pour les chiffres et petits libellés.
 
 L'écran **Thème** (bouton sur la page d'accueil) affiche le thème en lecture seule :
-couleurs, polices, logo, chemin du fichier à modifier et **vérification des contrastes**
-(minimum conseillé 4,5:1). Un contraste insuffisant donne un avertissement, sans bloquer ;
-une valeur invalide (couleur qui n'est pas au format `#RRGGBB`, logo introuvable…) donne
-un message d'erreur clair indiquant la clé à corriger.
+couleurs, couleurs des rubriques, polices, logos, chemin du fichier à modifier et
+**vérification des contrastes** (4,5:1 pour le texte courant, 3:1 pour le grand texte).
+Un contraste insuffisant donne un avertissement, sans bloquer ; une valeur invalide
+(couleur qui n'est pas au format `#RRGGBB`, logo introuvable…) donne un message d'erreur
+clair indiquant la clé à corriger.
 
 ## Franchisés et opportunités
 
@@ -442,13 +450,13 @@ NewsFranchise/
 │   ├── regles_detection.yaml # Règles « opportunité » et franchisés
 │   ├── lieux_france.yaml   # Régions, départements, grandes villes
 │   ├── limites.yaml        # Limites éditoriales par rubrique
-│   ├── theme.yaml          # Charte graphique de la newsletter (valeurs provisoires)
-│   ├── assets/             # Logo (logo provisoire généré par l'application)
+│   ├── theme.yaml          # Charte graphique de la newsletter (charte Carmila 2023)
+│   ├── assets/             # Logos Carmila (couleurs, réserve blanche)
 │   └── sources.example.yaml  # Format documenté de config/sources.yaml
 ├── docs/
 │   ├── data-model.md       # Modèle de données et procédure de migration
 │   ├── detection.md        # Détection des opportunités et des franchisés
-│   ├── theme.md            # Appliquer la charte Carmila au thème
+│   ├── theme.md            # Charte Carmila appliquée au thème, valeurs modifiables
 │   └── securite.md         # CSRF, contrôle du Host, échappement, liens non modifiables
 ├── news_franchise/         # Code de l'application
 │   ├── __init__.py         # create_app(), routes, pages d'erreur, __version__
@@ -478,8 +486,9 @@ NewsFranchise/
 │   ├── detect/             # Détection : règles, phrases, lieux, opportunités, franchisés
 │   ├── review/             # Relecture : limites, actions (service.py), pages (views.py)
 │   ├── content/            # Contenu interne : photos.py (traitement), service.py, pages
-│   ├── newsletter/         # Thème, dates, QR codes, vue de la newsletter, aperçu
+│   ├── newsletter/         # Thème, formes de la charte, dates, QR codes, vue, aperçu
 │   ├── security.py         # Clé secrète, jeton CSRF, contrôle du Host et de l'origine
+│   ├── fonts.py            # Police système pour les images générées (logo, démo)
 │   ├── tools/
 │   │   ├── diagnose_sources.py  # Outil de diagnostic des sources
 │   │   ├── collect.py      # Collecte en ligne de commande

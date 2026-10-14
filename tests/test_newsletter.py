@@ -525,3 +525,16 @@ def test_system_font_falls_back_without_accents(monkeypatch: pytest.MonkeyPatch)
     assert text == "DMO"
     text, _ = fonts.system_font(20, "DÉMO", "DEMO")
     assert text == "DEMO"
+
+
+def test_print_buttons(demo_client: FlaskClient) -> None:
+    preview = _html(demo_client.get("/newsletters/2000-01/apercu"))
+    assert 'id="imprimer"' in preview and "/static/print.js" in preview
+    link = 'href="/newsletters/2000-01/apercu?imprimer=1"'
+    assert link in _html(demo_client.get("/newsletters/2000-01/rubrique-1"))
+    assert link in _html(demo_client.get("/newsletters/2000-01/export"))
+    script = demo_client.get("/static/print.js")
+    assert script.status_code == 200 and b"window.print()" in script.data
+    # La barre d'aperçu (et son bouton) n'apparaît pas sur la feuille imprimée.
+    css = demo_client.get("/static/newsletter.css").get_data(as_text=True)
+    assert re.search(r"@media print \{.*\.preview-bar \{ display: none; \}", css, re.DOTALL)

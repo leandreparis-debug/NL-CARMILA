@@ -320,7 +320,7 @@ Les QR codes (correction d'erreur M) sont conservés dans `<données>\exports\qr
 un nom tiré de l'empreinte SHA-256 du lien : ils ne sont produits qu'une fois. Un QR code
 n'est produit que pour un lien `http://` ou `https://`.
 
-Ctrl + P depuis l'aperçu donne déjà une impression A4 (la démonstration, au-dessus des limites par rubrique, fait 5 pages ; le A4 final de l'étape 10 devra tenir en 4) ; les exports e-mail et A4
+Le bouton **Imprimer** (dans l'aperçu, l'écran du mois et la page d'export) ouvre la boîte d'impression du navigateur : imprimante, ou « Enregistrer au format PDF ». L'impression donne déjà un A4 (la démonstration, au-dessus des limites par rubrique, fait 5 pages ; le A4 final de l'étape 10 devra tenir en 4) ; les exports e-mail et A4
 arrivent dans les étapes suivantes et reprendront les mêmes gabarits
 (`news_franchise/templates/newsletter/_*.html`).
 

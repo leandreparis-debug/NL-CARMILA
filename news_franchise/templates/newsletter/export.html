@@ -7,6 +7,7 @@
   <p>
     <a class="btn" href="{{ url_for('review.month_home', month=newsletter.month) }}">Revenir à la relecture</a>
     <a class="btn" href="{{ url_for('newsletter.preview', month=newsletter.month) }}">Aperçu</a>
+  <a class="btn" href="{{ url_for('newsletter.preview', month=newsletter.month, imprimer=1) }}" target="_blank" rel="noopener">Imprimer</a>
   </p>
 
   <section class="export-box" aria-labelledby="email-titre">

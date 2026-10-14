@@ -22,7 +22,19 @@ body.nl-page {
   font-size: 0.9rem;
   color: #374151;
 }
+.preview-bar { align-items: center; }
 .preview-bar a { color: #1f2937; }
+.print-button {
+  padding: 0.45rem 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--nf-secondary);
+  color: var(--nf-background);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.print-button:hover { opacity: 0.9; }
 
 .nl {
   max-width: 800px;

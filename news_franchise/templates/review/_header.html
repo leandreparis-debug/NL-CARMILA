@@ -7,6 +7,7 @@
   </div>
   <div class="head-actions">
   <a class="btn" href="{{ url_for('newsletter.preview', month=newsletter.month) }}">Aperçu</a>
+  <a class="btn" href="{{ url_for('newsletter.preview', month=newsletter.month, imprimer=1) }}" target="_blank" rel="noopener">Imprimer</a>
   <a class="btn" href="{{ url_for('newsletter.export_page', month=newsletter.month) }}">Exporter</a>
   <form method="post" action="{{ url_for('review.set_status', month=newsletter.month) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

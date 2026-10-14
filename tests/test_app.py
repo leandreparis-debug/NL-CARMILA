@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from contextlib import closing
 from datetime import date
 from pathlib import Path
@@ -99,3 +100,45 @@ def test_one_connection_per_request_closed_at_teardown(app: Flask) -> None:
         assert "db" in g
     with pytest.raises(Exception, match="closed"):
         conn.execute("SELECT 1")
+
+
+def test_sidebar_menu_marks_the_current_section(client: FlaskClient) -> None:
+    from news_franchise.ui import NAV
+
+    html = client.get("/").get_data(as_text=True)
+    for _, label, _ in NAV:
+        assert label in html
+    assert 'src="/theme/logo/blanc"' in html  # logo Carmila en réserve blanche
+    assert re.search(r'class="side-link is-active" href="/" aria-current="page"', html)
+    collect = client.get("/collecte/").get_data(as_text=True)
+    assert re.search(r'is-active" href="/collecte/" aria-current="page"', collect)
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "section"),
+    [
+        ("index", "accueil"),
+        (None, "accueil"),
+        ("review.month", "relecture"),
+        ("content.openings", "relecture"),
+        ("content.start", "contenu"),
+        ("collect.status", "collecte"),
+        ("newsletter.export_page", "export"),
+        ("newsletter.exports", "export"),
+        ("newsletter.theme", "theme"),
+        ("newsletter.preview", "relecture"),
+    ],
+)
+def test_active_section(endpoint: str | None, section: str) -> None:
+    from news_franchise.ui import active_section
+
+    assert active_section(endpoint) == section
+
+
+def test_menu_icons_stay_visible_on_the_sidebar() -> None:
+    from news_franchise.newsletter.theme import contrast_ratio
+    from news_franchise.ui import _visible_on
+
+    colors = _visible_on(("#EF4050", "#004D46", "#60C3AD"), "#004D46")
+    assert "#004D46" not in colors
+    assert all(contrast_ratio(color, "#004D46") >= 2 for color in colors)

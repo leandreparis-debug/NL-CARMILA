@@ -19,21 +19,12 @@ from news_franchise.db import connection as db_connection
 from news_franchise.newsletter.views import bp as newsletter_bp
 from news_franchise.review.views import bp as review_bp
 from news_franchise.security import init_security
+from news_franchise.ui import ui_context
 from news_franchise.version import __version__
 
 __all__ = ["__version__", "create_app"]
 
 logger = logging.getLogger(__name__)
-
-# Boutons de la page d'accueil : (libellé, route Flask) ; route None = pas encore disponible.
-FEATURES: tuple[tuple[str, str | None], ...] = (
-    ("Collecter la veille", "collect.index"),
-    ("Relire", "review.index"),
-    ("Contenu interne", "content.start"),
-    ("Exporter", "newsletter.exports"),
-    ("Thème", "newsletter.theme"),
-)
-
 
 def create_app(settings: Settings | None = None, brands_file: Path | None = None) -> Flask:
     """Crée et configure l'application Flask.
@@ -64,7 +55,7 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
     @app.context_processor
     def inject_globals() -> dict[str, object]:
         """Variables communes à tous les gabarits."""
-        return {"app_version": __version__}
+        return {"app_version": __version__, **ui_context()}
 
     @app.get("/")
     def index() -> ResponseReturnValue:
@@ -72,7 +63,6 @@ def create_app(settings: Settings | None = None, brands_file: Path | None = None
         return render_template(
             "index.html",
             current_month=format_month_fr(date.today()),
-            features=FEATURES,
         )
 
     @app.get("/health")

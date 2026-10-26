@@ -110,7 +110,7 @@ demandées, l'administrateur doit les autoriser : le script ne peut pas s'en pas
 | `raw` | message complet au format MIME, encodé en base64 « URL » (ce que dépose le script) ; texte et HTML y sont en UTF-8 lisible (« 8bit »), pour que le script y pose le lien du PDF |
 | `printPdf` | `{fileName, mimeType, data}` : la version PDF à imprimer (`data` en base64), ou `null` |
 | `printLinkToken` | adresse provisoire du lien « voir la version à imprimer », remplacé par le lien du PDF dans Drive, ou `null` |
-| `subject` | objet : « News Franchise — Octobre 2026 » |
+| `subject` | objet : « News Franchise - Octobre 2026 » |
 | `htmlBody` | HTML de l'e-mail ; les images y sont appelées par `cid:<nom>` |
 | `textBody` | version texte |
 | `images` | liste `{cid, fileName, mimeType, data}` (`data` en base64) |

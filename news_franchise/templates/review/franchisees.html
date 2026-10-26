@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "review/_macros.html" import val, invalid, error %}
-{% block title %}Franchisés {{ month_label }} — News Franchise{% endblock %}
+{% block title %}Franchisés {{ month_label }} - News Franchise{% endblock %}
 {% block content %}
   {% set counted_label = "validés" %}
   {% include "review/_header.html" %}
@@ -37,7 +37,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="filtre" value="{{ filtre }}">
             {% if f.validated %}
-              <button type="submit" name="valeur" value="0" class="btn btn-small btn-kept" title="Cliquer pour retirer la validation">✓ Validé — retirer la validation</button>
+              <button type="submit" name="valeur" value="0" class="btn btn-small btn-kept" title="Cliquer pour retirer la validation">✓ Validé - retirer la validation</button>
             {% else %}
               <button type="submit" name="valeur" value="1" class="btn btn-small btn-primary">Valider</button>
             {% endif %}

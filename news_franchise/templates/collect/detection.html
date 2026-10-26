@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Détection {{ month_label }} — News Franchise{% endblock %}
+{% block title %}Détection {{ month_label }} - News Franchise{% endblock %}
 {% block content %}
   <h1>Détection : {{ month_label }}</h1>
   {% if error %}<p class="alert">{{ error }}</p>{% endif %}
@@ -22,7 +22,7 @@
       <ul class="evidence">
         {% for finding in report.opportunities %}
           <li><a href="{{ finding.article.url }}" target="_blank" rel="noopener noreferrer">{{ finding.article.title }}</a>
-            — {{ finding.article.source_name }}<br>
+            - {{ finding.article.source_name }}<br>
             <q>{{ finding.match.sentence }}</q><br>
             <small>Termes : {{ finding.match.terms|join(", ") }}</small></li>
         {% endfor %}
@@ -34,9 +34,9 @@
       <ul class="evidence">
         {% for finding in report.candidates %}
           {% set c = finding.candidate %}
-          <li><strong>{{ c.name }}</strong> — {{ c.brands|join(", ") or "enseigne inconnue" }}
-            — {{ c.location or "lieu inconnu" }}
-            — {% if c.store_count is not none %}{{ c.store_count }} point(s) de vente{% else %}nombre inconnu{% endif %}
+          <li><strong>{{ c.name }}</strong> - {{ c.brands|join(", ") or "enseigne inconnue" }}
+            - {{ c.location or "lieu inconnu" }}
+            - {% if c.store_count is not none %}{{ c.store_count }} point(s) de vente{% else %}nombre inconnu{% endif %}
             ({{ {"haute": "fiche complète", "moyenne": "fiche partielle", "basse": "fiche incomplète"}[c.confidence] }})<br>
             <q>{{ c.evidence }}</q><br>
             <small>Source : <a href="{{ finding.article.url }}" target="_blank" rel="noopener noreferrer">{{ finding.article.source_name }}</a></small></li>

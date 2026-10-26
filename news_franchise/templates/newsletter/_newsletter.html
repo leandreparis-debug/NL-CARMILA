@@ -22,7 +22,7 @@
     </td>
   </tr>
   {# Un e-mail ne peut pas lancer l'impression : le lien ouvre la version PDF. #}
-  <tr><td style="{{ st.tagline }}">{{ theme.tagline }}{% if print_href %} — <a href="{{ print_href }}" style="{{ st.link }}text-decoration:underline;">voir la version à imprimer</a>{% endif %}</td></tr>
+  <tr><td style="{{ st.tagline }}">{{ theme.tagline }}{% if print_href %} - <a href="{{ print_href }}" style="{{ st.link }}text-decoration:underline;">voir la version à imprimer</a>{% endif %}</td></tr>
   {% include "newsletter/_une.html" %}
   {% include "newsletter/_sommaire.html" %}
   {% for section in view.visible_sections %}

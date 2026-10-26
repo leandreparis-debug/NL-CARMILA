@@ -420,7 +420,7 @@ def test_evaluation_report(
     assert "- [ ] juste  - [ ] faux" in text
     assert "## 4. Articles non marqués contenant un terme d'opportunité (1)" in text
     assert "Wycon prospecte" in text and "- [ ] oubli" in text
-    assert "### F1. Jean Dupont — confiance haute" in text
+    assert "### F1. Jean Dupont - confiance haute" in text
     # Simulation : la base n'est pas modifiée.
     assert articles.get(db, opp.id).opportunity_source is None  # type: ignore[union-attr, arg-type]
     assert franchisees.list_for_newsletter(db, newsletter.id) == []  # type: ignore[arg-type]

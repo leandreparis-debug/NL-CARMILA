@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Exporter {{ month_label }} — News Franchise{% endblock %}
+{% block title %}Exporter {{ month_label }} - News Franchise{% endblock %}
 {% block content %}
   <p class="breadcrumb"><a href="{{ url_for('newsletter.exports') }}">Exporter</a> › {{ month_label }}</p>
   <h1>Exporter : {{ month_label }}
@@ -30,11 +30,11 @@
         <dt>Images jointes</dt><dd>{{ info.images_count }} ({{ info.images_size_label }})</dd>
         <dt>Version à imprimer</dt>
         <dd>{% if info.pdf %}<a href="{{ url_for('newsletter.export_email_pdf', month=newsletter.month, name='news-franchise-' ~ newsletter.month) }}" target="_blank" rel="noopener">{{ info.pdf.name }}</a>
-          <span class="muted">— ouverte par le lien « voir la version à imprimer » de l'e-mail</span>
+          <span class="muted">- ouverte par le lien « voir la version à imprimer » de l'e-mail</span>
           {% else %}<span class="muted">aucune : l'e-mail n'a pas de lien vers la version à imprimer (voir le message plus haut)</span>{% endif %}</dd>
         <dt>Dossier</dt><dd><code>{{ info.package.parent }}</code></dd>
         <dt>Paquet pour Gmail</dt>
-        <dd><code>{{ info.package.name }}</code> —
+        <dd><code>{{ info.package.name }}</code> -
           <a href="{{ url_for('newsletter.export_email_package', month=newsletter.month) }}">télécharger</a></dd>
       </dl>
       <p><a class="btn" href="{{ url_for('newsletter.export_email_preview', month=newsletter.month) }}" target="_blank" rel="noopener">Ouvrir l'e-mail dans un nouvel onglet</a></p>

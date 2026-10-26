@@ -215,7 +215,7 @@ def test_card_form_has_no_retain_checkbox(
     article = _add(conn, newsletter, 1)
     html = _html(web.get(f"{BASE}/rubrique-1"))
     assert 'name="retenir"' not in html
-    assert "✓ Retenu — ne plus retenir" in html
+    assert "✓ Retenu - ne plus retenir" in html
     # Envoyer « retenir » au formulaire de carte ne change rien : seul le bouton rapide compte.
     articles.set_selected(conn, article.id, False)  # type: ignore[arg-type]
     post_form(web, f"{BASE}/articles/{article.id}", {"titre": "T", "source": "S", "retenir": "on"})

@@ -163,9 +163,9 @@ Une fois la veille collectée, la relecture permet en quelques minutes de choisi
 
 1. **Accueil → Relire.** La page « Newsletters » liste les mois, du plus récent au plus ancien, avec leur statut (Brouillon, Relue, Exportée) et le nombre d'éléments retenus. Cliquez sur **Relire** devant un mois, ou choisissez un mois puis **Ouvrir ou créer ce mois**.
 2. **Trois onglets** :
-   - *Rubrique 1 — Marché de la franchise* ;
-   - *Rubrique 2 — Nos enseignes* ;
-   - *Rubrique 5 — Franchisés identifiés*.
+   - *Rubrique 1 - Marché de la franchise* ;
+   - *Rubrique 2 - Nos enseignes* ;
+   - *Rubrique 5 - Franchisés identifiés*.
 
    Chaque onglet affiche un compteur « retenus / limite ». Il passe **en orange** quand la limite est dépassée : c'est un avertissement, rien n'est bloqué. Un rappel indique que la version imprimée doit tenir en 4 pages A4.
 3. **Filtres** :
@@ -176,7 +176,7 @@ Une fois la veille collectée, la relecture permet en quelques minutes de choisi
    - **Tout déplier / Tout replier** ouvre ou ferme tous les formulaires.
 5. **Retenir.** Un seul bouton, sur la ligne de l'article :
    - **Retenir** pour garder l'article dans la newsletter ;
-   - **✓ Retenu — ne plus retenir** pour l'en retirer (il reste visible, en grisé).
+   - **✓ Retenu - ne plus retenir** pour l'en retirer (il reste visible, en grisé).
 6. **Ordonner** :
    - **⤒ En tête**, **↑ Monter**, **↓ Descendre**, **⤓ En fin** ;
    - ou tapez un numéro dans **Rang**, puis **Placer**. Un numéro trop grand place l'article en dernier.

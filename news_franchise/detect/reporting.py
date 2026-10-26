@@ -49,11 +49,11 @@ def format_summary(report: DetectionReport, examples: int = 5) -> list[str]:
             break
         c = finding.candidate
         lines += [
-            f"  • Franchisé : {c.name} — enseigne(s) : {', '.join(c.brands) or '—'} — "
-            f"lieu : {c.location or '—'} — points de vente : {c.store_count or '—'} — "
+            f"  • Franchisé : {c.name} - enseigne(s) : {', '.join(c.brands) or '-'} - "
+            f"lieu : {c.location or '-'} - points de vente : {c.store_count or '-'} - "
             f"confiance {c.confidence}",
             f"    Phrase : « {c.evidence} »",
-            f"    Source : {finding.article.source_name} — {finding.article.url}",
+            f"    Source : {finding.article.source_name} - {finding.article.url}",
         ]
         shown += 1
     return lines
@@ -66,7 +66,7 @@ def _md(text: str) -> str:
 
 def _article_line(article: Article) -> str:
     """Titre, source et lien d'un article."""
-    return f"[{_md(article.title)}]({article.url}) — {_md(article.source_name)}"
+    return f"[{_md(article.title)}]({article.url}) - {_md(article.source_name)}"
 
 
 def render_evaluation(
@@ -89,7 +89,7 @@ def render_evaluation(
 
     by_confidence = report.by_confidence
     lines = [
-        f"# Fiabilité de la détection — {report.month}",
+        f"# Fiabilité de la détection - {report.month}",
         "",
         f"Généré le {now.astimezone():%d/%m/%Y à %H:%M} à partir des articles en base "
         "(simulation : la base n'est pas modifiée).",
@@ -143,11 +143,11 @@ def render_evaluation(
         c = finding.candidate
         lines += [
             "",
-            f"### F{index}. {_md(c.name)} — confiance {c.confidence}",
+            f"### F{index}. {_md(c.name)} - confiance {c.confidence}",
             "",
-            f"- Enseigne(s) : {_md(', '.join(c.brands)) or '—'} ; "
-            f"lieu : {_md(c.location or '—')} ; "
-            f"points de vente : {c.store_count if c.store_count is not None else '—'}",
+            f"- Enseigne(s) : {_md(', '.join(c.brands)) or '-'} ; "
+            f"lieu : {_md(c.location or '-')} ; "
+            f"points de vente : {c.store_count if c.store_count is not None else '-'}",
             f"- Article : {_article_line(finding.article)}",
             f"- Phrase : « {_md(c.evidence)} »",
             f"- Termes déclencheurs : {', '.join(c.trigger_terms)}",
@@ -179,6 +179,6 @@ def render_evaluation(
     for article, hits in near_misses:
         lines += ["", f"- {_article_line(article)}"]
         for sentence, terms in hits[:3]:
-            lines.append(f"  - « {_md(sentence)} » — termes : {', '.join(terms)}")
+            lines.append(f"  - « {_md(sentence)} » - termes : {', '.join(terms)}")
         lines.append("  - [ ] oubli (aurait dû être marqué)")
     return "\n".join(lines) + "\n"

@@ -1,5 +1,5 @@
 /**
- * News Franchise — crée le brouillon Gmail de la newsletter.
+ * News Franchise - crée le brouillon Gmail de la newsletter.
  *
  * Lit, dans le dossier Google Drive DOSSIER_DRIVE, le paquet le plus récent produit par
  * l'application (news-franchise-AAAA-MM.json), puis crée un brouillon dans Gmail avec le

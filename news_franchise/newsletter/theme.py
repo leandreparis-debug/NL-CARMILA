@@ -170,7 +170,7 @@ class Theme:
     def warnings(self) -> list[str]:
         """Avertissements (non bloquants) pour les contrastes sous le minimum."""
         return [
-            f"Contraste insuffisant — {check.label} : {check.ratio_label} "
+            f"Contraste insuffisant - {check.label} : {check.ratio_label} "
             f"({check.foreground} sur {check.background}, minimum conseillé "
             f"{check.minimum_label})."
             for check in self.contrast_checks()

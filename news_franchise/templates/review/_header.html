@@ -40,7 +40,7 @@
 <div class="counter-bar">
   <p class="counter{% if count > limit %} counter-over{% endif %}">
     <strong>{{ count }} {{ counted_label }}</strong> / limite {{ limit }}
-    {% if count > limit %}— limite dépassée : pensez à en retirer.{% endif %}
+    {% if count > limit %}- limite dépassée : pensez à en retirer.{% endif %}
   </p>
   <p class="muted">Rappel : la version imprimée doit tenir en {{ limits.pages_max }} pages A4.</p>
 </div>

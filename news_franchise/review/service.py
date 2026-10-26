@@ -26,7 +26,7 @@ from news_franchise.repositories._common import utcnow
 from news_franchise.review.limits import Limits
 
 STATUS_LABELS = {"draft": "Brouillon", "reviewed": "Relue", "exported": "Exportée"}
-RUBRIC_TITLES = {1: "Rubrique 1 — Marché de la franchise", 2: "Rubrique 2 — Nos enseignes"}
+RUBRIC_TITLES = {1: "Rubrique 1 - Marché de la franchise", 2: "Rubrique 2 - Nos enseignes"}
 
 MAX_TITLE = 300
 MAX_EXCERPT = 1000

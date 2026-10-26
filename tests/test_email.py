@@ -67,7 +67,7 @@ def test_demo_email_respects_gmail_rules(
 ) -> None:
     export = _email(app, conn, demo_settings)
     html = export.html
-    assert export.subject == "News Franchise — Janvier 2000"
+    assert export.subject == "News Franchise - Janvier 2000"
     # Gmail : pas de SVG, pas de feuille de style ni de mise en page flex/grid, ni script.
     lowered = html.lower()
     for forbidden in ("<svg", "<style", "display:flex", "display:grid", "<script", "position:"):
@@ -262,7 +262,7 @@ def test_mime_message_has_inline_images(
     export = _email(app, conn, demo_settings)
     data = json.loads(package_json(export))
     message = message_from_bytes(base64.urlsafe_b64decode(data["raw"]), policy=policy.default)
-    assert message["Subject"] == "News Franchise — Janvier 2000"
+    assert message["Subject"] == "News Franchise - Janvier 2000"
     assert message.get_content_type() == "multipart/alternative"
     plain, related = message.get_payload()
     assert plain.get_content_type() == "text/plain"
@@ -364,7 +364,7 @@ def test_print_button_links_to_the_pdf(
     # Bouton en haut et lien en pied de page, vers le lien provisoire (remplacé par le script).
     assert export.html.count(f'href="{token}"') == 2
     # Lien discret, souligné, à côté de la phrase d'accroche (et en pied de page).
-    assert "La newsletter mensuelle de Carmila Franchise — <a" in export.html
+    assert "La newsletter mensuelle de Carmila Franchise - <a" in export.html
     assert "voir la version à imprimer</a>" in export.html
     assert "Imprimer la newsletter" not in export.html  # plus de gros bouton
     assert f"Voir la version à imprimer (PDF) : {token}" in export.text

@@ -67,7 +67,7 @@ newsletters ─┬─< articles >──── brands
 | `selected` | INTEGER | 1 (défaut) = retenu pour la newsletter |
 | `position` | INTEGER | ordre dans la rubrique |
 | `collected_at` | TEXT | date de collecte |
-| `opportunity_source` | TEXT | origine du repère `is_opportunity` : NULL (jamais évalué), `auto` (détection), `manual` (modifié à la main : la détection n'y touche plus) — migration 0004 |
+| `opportunity_source` | TEXT | origine du repère `is_opportunity` : NULL (jamais évalué), `auto` (détection), `manual` (modifié à la main : la détection n'y touche plus) - migration 0004 |
 | `opportunity_evidence` | TEXT | phrase de l'article qui justifie le repère (texte brut, ≤ 400 caractères) |
 | `opportunity_terms` | TEXT | termes déclencheurs (liste JSON) |
 | `body_text` | TEXT | texte brut de l'article (paragraphes du corps), tronqué à 20 000 caractères, nullable (migration 0002). Sert à la détection des franchisés et des opportunités ; **jamais affiché tel quel** dans la newsletter |
@@ -85,7 +85,7 @@ newsletters ─┬─< articles >──── brands
 | `article_id` | INTEGER | → `articles`, nullable, `ON DELETE SET NULL` |
 | `validated` | INTEGER | 0 (défaut) = détecté, 1 = validé par l'utilisateur |
 | `position` | INTEGER | ordre d'affichage |
-| `confidence` | TEXT | `haute`, `moyenne`, `basse` (fiche créée par la détection) ; NULL = fiche saisie à la main — migration 0004 |
+| `confidence` | TEXT | `haute`, `moyenne`, `basse` (fiche créée par la détection) ; NULL = fiche saisie à la main - migration 0004 |
 | `evidence` | TEXT | phrase de l'article qui justifie la fiche (≤ 400 caractères) |
 | `trigger_terms` | TEXT | termes déclencheurs (liste JSON) |
 | `edited` | INTEGER | 1 = modifiée à la main (la détection n'y touche plus) |

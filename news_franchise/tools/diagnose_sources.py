@@ -206,7 +206,7 @@ def run_diagnosis(
 
 def _fmt_date(value: datetime | None) -> str:
     """Date au format français, ou tiret."""
-    return value.strftime("%d/%m/%Y") if value else "—"
+    return value.strftime("%d/%m/%Y") if value else "-"
 
 
 def _cell(text: object) -> str:
@@ -239,7 +239,7 @@ def render_markdown(diagnosis: Diagnosis) -> str:
         else:
             best = next((r for r in source.reports if r.feed_url == source.best_feed), None)
             recent = best.recent_count if best else 0
-            feed = source.best_feed or "—"
+            feed = source.best_feed or "-"
         lines.append(
             f"| {_cell(source.name)} | {source.type} | **{source.verdict}** | {_cell(feed)} "
             f"| {recent} | {_cell(source.reason)} |"
@@ -266,7 +266,7 @@ def _render_site(source: SourceResult) -> list[str]:
     """Section Markdown d'un site."""
     lines = [
         f"- Site : {source.site_url}",
-        f"- Verdict : **{source.verdict}** — {source.reason}",
+        f"- Verdict : **{source.verdict}** - {source.reason}",
     ]
     if source.homepage_error:
         lines.append(f"- Page d'accueil : {source.homepage_error}")
@@ -288,8 +288,8 @@ def _render_feed_figures(report: FeedReport) -> list[str]:
     if report.fetch_error:
         return [f"- Erreur : {report.fetch_error}"]
     lines = [
-        f"- Verdict : **{report.verdict}** — {report.reason}",
-        f"- Titre du flux : {report.feed_title or '—'}",
+        f"- Verdict : **{report.verdict}** - {report.reason}",
+        f"- Titre du flux : {report.feed_title or '-'}",
         f"- Articles dans le flux : {report.entry_count} ; sur 30 jours : {report.recent_count} ; "
         f"plus récent : {_fmt_date(report.latest_entry)}",
         f"- Articles avec titre : {_pct(report.share_title)} ; date : {_pct(report.share_date)} ; "
@@ -321,7 +321,7 @@ def _render_google(source: SourceResult) -> list[str]:
         "non bloquant : ils ouvrent bien le vrai article chez le lecteur",
     }.get(source.link_resolution or "", "non déterminée")
     lines = [
-        f"- Verdict : **{source.verdict}** — {source.reason}",
+        f"- Verdict : **{source.verdict}** - {source.reason}",
         f"- Modèle de requête : `{GOOGLE_NEWS_QUERY_TEMPLATE}`",
         f"- Résolution des liens : {resolution}",
         "",
@@ -333,8 +333,8 @@ def _render_google(source: SourceResult) -> list[str]:
         publishers = ", ".join(f"{name} ({count})" for name, count in report.publishers[:3])
         lines.append(
             f"| {_cell(report.brand)} | {report.verdict} | {report.recent_count} "
-            f"| {_fmt_date(report.latest_entry)} | {_cell(publishers or '—')} "
-            f"| {report.link_resolution or '—'} | {_cell(report.reason)} |"
+            f"| {_fmt_date(report.latest_entry)} | {_cell(publishers or '-')} "
+            f"| {report.link_resolution or '-'} | {_cell(report.reason)} |"
         )
     for report in source.reports:
         if report.sample_titles or report.fetch_error:

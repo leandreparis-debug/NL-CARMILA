@@ -139,7 +139,7 @@ def add_opening(month: str) -> ResponseReturnValue:
         return _refused(newsletter, "ouvertures", NEW_ITEM, exc)
     added = openings.add(get_db(), opening)
     flash(
-        f"Ouverture ajoutée : {added.brand_name} — {added.location}. Ajoutez-lui des photos.",
+        f"Ouverture ajoutée : {added.brand_name} - {added.location}. Ajoutez-lui des photos.",
         "success",
     )
     if warning:
@@ -185,13 +185,13 @@ def delete_opening(month: str, opening_id: int) -> ResponseReturnValue:
     if request.method == "GET":
         return _confirm(
             "cette ouverture",
-            f"{opening.brand_name} — {opening.location}",
+            f"{opening.brand_name} - {opening.location}",
             url_for("content.delete_opening", month=month, opening_id=opening_id),
             url_for("review.month", month=month, tab="ouvertures") + f"#ouverture-{opening_id}",
             "L'ouverture et toutes ses photos seront définitivement supprimées.",
         )
     openings.delete(get_db(), opening_id, _photos_dir())  # type: ignore[arg-type]
-    flash(f"Ouverture supprimée : {opening.brand_name} — {opening.location}.", "success")
+    flash(f"Ouverture supprimée : {opening.brand_name} - {opening.location}.", "success")
     return _back(month, "ouvertures")
 
 
@@ -254,7 +254,7 @@ def delete_photo(month: str, photo_id: int) -> ResponseReturnValue:
     if request.method == "GET":
         return _confirm(
             "cette photo",
-            f"Photo de l'ouverture {opening.brand_name} — {opening.location}",
+            f"Photo de l'ouverture {opening.brand_name} - {opening.location}",
             url_for("content.delete_photo", month=month, photo_id=photo_id),
             url_for("review.month", month=month, tab="ouvertures") + f"#ouverture-{opening.id}",
             "La photo sera définitivement supprimée.",

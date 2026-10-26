@@ -280,7 +280,7 @@ class _Images:
 
 def _text_version(view: NewsletterView, theme: Theme, print_href: str | None = None) -> str:
     """Version texte de l'e-mail (lecteurs sans HTML, aperçus de notification)."""
-    lines = [f"{theme.name.upper()} — {view.month_label}", theme.tagline, ""]
+    lines = [f"{theme.name.upper()} - {view.month_label}", theme.tagline, ""]
     if print_href:
         lines += [f"Voir la version à imprimer (PDF) : {print_href}", ""]
     lines.append(view.front_title.upper())
@@ -295,7 +295,7 @@ def _text_version(view: NewsletterView, theme: Theme, print_href: str | None = N
                     meta += f" · {OPPORTUNITY_LABEL}"
                 lines += [f"  {meta}", f"  {item.url}"]
             elif isinstance(item, OpeningItem):
-                when = f" — ouverture le {item.date_label}" if item.date_label else ""
+                when = f" - ouverture le {item.date_label}" if item.date_label else ""
                 lines.append(f"- {item.brand}, {item.location}{when}")
             elif isinstance(item, MeetingItem):
                 when = f" ({item.date_label})" if item.date_label else ""
@@ -305,8 +305,8 @@ def _text_version(view: NewsletterView, theme: Theme, print_href: str | None = N
                 details = " · ".join(
                     part for part in (item.brands, item.location, item.store_count_label) if part
                 )
-                lines.append(f"- {item.name}" + (f" — {details}" if details else ""))
-                lines.append(f"  Source : {item.source_name} — {item.source_url}")
+                lines.append(f"- {item.name}" + (f" - {details}" if details else ""))
+                lines.append(f"  Source : {item.source_name} - {item.source_url}")
             elif isinstance(item, PlansItem):
                 lines.append(f"- {item.label} : {item.url}")
     lines += ["", theme.footer_text]
@@ -377,7 +377,7 @@ def build_email(
                     "jpg",
                 )
 
-    subject = f"{theme.name} — {view.month_label}"
+    subject = f"{theme.name} - {view.month_label}"
     preheader = f"{view.month_label} : " + ", ".join(f"{f.value} {f.label}" for f in view.front)
     context = {
         "view": view,

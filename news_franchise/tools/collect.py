@@ -95,11 +95,11 @@ def format_report(report: CollectionReport, examples: int = 5) -> list[str]:
             published = (
                 article.published_at.astimezone(PARIS).strftime("%d/%m/%Y")
                 if article.published_at
-                else "—"
+                else "-"
             )
             lines += [
                 f"  • [{article.rubric}] {article.title}",
-                f"    Source : {article.source_name} — {published}",
+                f"    Source : {article.source_name} - {published}",
                 f"    Lien : {article.url}",
                 f"    Premières lignes : {article.excerpt or '(aucune)'}",
             ]

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Ajouter un article — News Franchise{% endblock %}
+{% block title %}Ajouter un article - News Franchise{% endblock %}
 {% block content %}
   <p class="breadcrumb"><a href="{{ url_for('review.index') }}">Newsletters</a> ›
     <a href="{{ url_for('review.month', month=newsletter.month, tab='rubrique-' ~ (form.rubrique or '1')) }}">{{ month_label }}</a> › Ajouter un article</p>
@@ -17,8 +17,8 @@
       </div>
       <fieldset class="field">
         <legend>Rubrique</legend>
-        <label class="check"><input type="radio" name="rubrique" value="1" {% if form.rubrique != "2" %}checked{% endif %}> Rubrique 1 — Marché de la franchise</label>
-        <label class="check"><input type="radio" name="rubrique" value="2" {% if form.rubrique == "2" %}checked{% endif %}> Rubrique 2 — Nos enseignes</label>
+        <label class="check"><input type="radio" name="rubrique" value="1" {% if form.rubrique != "2" %}checked{% endif %}> Rubrique 1 - Marché de la franchise</label>
+        <label class="check"><input type="radio" name="rubrique" value="2" {% if form.rubrique == "2" %}checked{% endif %}> Rubrique 2 - Nos enseignes</label>
       </fieldset>
       <button type="submit" class="btn btn-primary">Vérifier le lien</button>
     </form>
@@ -39,7 +39,7 @@
       <input type="hidden" name="lien" value="{{ form.lien }}">
       <input type="hidden" name="rubrique" value="{{ form.rubrique }}">
       <p>Lien : <a href="{{ form.lien }}" target="_blank" rel="noopener noreferrer">{{ form.lien }}</a>
-        — {% if form.rubrique == "2" %}Rubrique 2 — Nos enseignes{% else %}Rubrique 1 — Marché de la franchise{% endif %}</p>
+        - {% if form.rubrique == "2" %}Rubrique 2 - Nos enseignes{% else %}Rubrique 1 - Marché de la franchise{% endif %}</p>
       <div class="grid">
         <div class="field field-wide">
           <label for="titre">Titre</label>
@@ -50,7 +50,7 @@
         <div class="field">
           <label for="enseigne">Enseigne</label>
           <select id="enseigne" name="enseigne" class="brand-select" data-other="autre-field">
-            <option value="">— Aucune —</option>
+            <option value="">- Aucune -</option>
             {% for b in brand_list %}
               <option value="{{ b.id }}" {% if form.enseigne == b.id|string %}selected{% endif %}>{{ b.name }}</option>
             {% endfor %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "review/_macros.html" import val, checked, invalid, error %}
-{% block title %}Relecture {{ month_label }} — News Franchise{% endblock %}
+{% block title %}Relecture {{ month_label }} - News Franchise{% endblock %}
 {% block content %}
   {% set counted_label = "retenus" %}
   {% include "review/_header.html" %}
@@ -30,12 +30,12 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="filtre" value="{{ filtre }}">
           {% if a.selected %}
-            <button type="submit" name="valeur" value="0" class="btn btn-small btn-kept" title="Cliquer pour ne plus retenir cet article">✓ Retenu — ne plus retenir</button>
+            <button type="submit" name="valeur" value="0" class="btn btn-small btn-kept" title="Cliquer pour ne plus retenir cet article">✓ Retenu - ne plus retenir</button>
           {% else %}
             <button type="submit" name="valeur" value="1" class="btn btn-small btn-primary">Retenir</button>
           {% endif %}
         </form>
-        <span class="line-brand">{{ brand_names.get(a.brand_id) or a.brand_label or "—" }}</span>
+        <span class="line-brand">{{ brand_names.get(a.brand_id) or a.brand_label or "-" }}</span>
         <h2 class="card-title">{{ a.title }}</h2>
         <span class="line-meta">{{ a.source_name }}{% if a.published_at %} · {{ date_value(a)[8:10] }}/{{ date_value(a)[5:7] }}/{{ date_value(a)[0:4] }}{% endif %}</span>
         {% if a.is_opportunity %}<span class="badge badge-opp">Opportunité</span>{% endif %}
@@ -76,7 +76,7 @@
             <div class="field">
               <label for="{{ p }}-enseigne">Enseigne</label>
               <select id="{{ p }}-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-autre-field" {{ invalid(edit, a.id, 'enseigne', p ~ '-enseigne-err') }}>
-                <option value="" {% if not brand_value %}selected{% endif %}>— Aucune —</option>
+                <option value="" {% if not brand_value %}selected{% endif %}>- Aucune -</option>
                 {% for b in brand_list %}
                   <option value="{{ b.id }}" {% if brand_value == b.id|string %}selected{% endif %}>{{ b.name }}</option>
                 {% endfor %}
@@ -124,10 +124,10 @@
           <input type="hidden" name="filtre" value="{{ filtre }}">
           <input type="hidden" name="cible" value="{{ other_rubric }}">
           {% if other_rubric == 2 %}
-            <span class="label">Déplacer vers la rubrique 2 — Nos enseignes (choisissez l'enseigne) :</span>
+            <span class="label">Déplacer vers la rubrique 2 - Nos enseignes (choisissez l'enseigne) :</span>
             <label for="{{ p }}-cible-enseigne" class="sr-only">Enseigne pour la rubrique 2</label>
             <select id="{{ p }}-cible-enseigne" name="enseigne" class="brand-select" data-other="{{ p }}-cible-autre-field">
-              <option value="">— Choisir l'enseigne —</option>
+              <option value="">- Choisir l'enseigne -</option>
               {% for b in brand_list %}<option value="{{ b.id }}" {% if a.brand_id == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
               <option value="{{ other_brand }}" {% if a.brand_label %}selected{% endif %}>Autre…</option>
             </select>
@@ -138,7 +138,7 @@
             <button type="submit" class="btn btn-small">Déplacer vers la rubrique 2</button>
           {% else %}
             <span class="label">Cet article ne concerne pas une de nos enseignes ?</span>
-            <button type="submit" class="btn btn-small">Déplacer vers la rubrique 1 — Marché de la franchise</button>
+            <button type="submit" class="btn btn-small">Déplacer vers la rubrique 1 - Marché de la franchise</button>
           {% endif %}
         </form>
       </details>

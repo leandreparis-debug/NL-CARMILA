@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Collecte {{ month_label }} — News Franchise{% endblock %}
+{% block title %}Collecte {{ month_label }} - News Franchise{% endblock %}
 {% block head %}{% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}">{% endif %}{% endblock %}
 {% block content %}
   <h1>Collecte de la veille : {{ month_label }}</h1>
@@ -10,7 +10,7 @@
       <p>Source {{ job.progress.index }} sur {{ job.progress.total }} :
         <strong>{{ job.progress.source }}</strong></p>
       <progress max="{{ job.progress.total }}" value="{{ job.progress.index }}"></progress>
-      <p>Entrées lues : {{ job.progress.entries_read }} — articles ajoutés : {{ job.progress.added }}</p>
+      <p>Entrées lues : {{ job.progress.entries_read }} - articles ajoutés : {{ job.progress.added }}</p>
     {% else %}
       <p>Préparation…</p>
     {% endif %}

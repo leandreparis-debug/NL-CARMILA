@@ -1,16 +1,23 @@
-{# Lien vers les plans de développement (rubrique 6). En version imprimée, l'adresse est
-   aussi écrite en clair. #}
+{# Liens vers les plans de développement (rubrique 6, jusqu'à 6, un par région) : un bouton
+   par lien dans un même encadré. En version imprimée, chaque adresse est aussi écrite en
+   clair. #}
 {% if medium == "email" %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr><td style="{{ st.plans }}">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-      <tr><td bgcolor="{{ theme.colors.secondary }}" style="{{ st.button_cell }}"><a href="{{ item.url }}" style="{{ st.button }}">{{ item.label }} →</a></td></tr>
-    </table>
+    {% for item in section.items %}
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:{{ '0' if loop.first else '10px' }} 0 0;">
+        <tr><td bgcolor="{{ theme.colors.secondary }}" style="{{ st.button_cell }}"><a href="{{ item.url }}" style="{{ st.button }}">{{ item.label }} →</a></td></tr>
+      </table>
+    {% endfor %}
   </td></tr>
 </table>
 {% else %}
 <div class="nl-plans">
-  <a class="nl-button" href="{{ item.url }}">{{ item.label }} →</a>
-  {% if medium == "print" %}<p class="nl-url">{{ item.url }}</p>{% endif %}
+  {% for item in section.items %}
+    <div class="nl-plans-item">
+      <a class="nl-button" href="{{ item.url }}">{{ item.label }} →</a>
+      {% if medium == "print" %}<p class="nl-url">{{ item.url }}</p>{% endif %}
+    </div>
+  {% endfor %}
 </div>
 {% endif %}

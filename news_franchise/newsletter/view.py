@@ -12,7 +12,7 @@ from dataclasses import dataclass, field, replace
 
 from news_franchise.config import Settings
 from news_franchise.content.service import plural
-from news_franchise.models import DEFAULT_PLANS_LABEL, validate_month
+from news_franchise.models import validate_month
 from news_franchise.newsletter.dates import format_day, format_month
 from news_franchise.newsletter.theme import Theme, load_theme
 from news_franchise.repositories import (
@@ -22,9 +22,11 @@ from news_franchise.repositories import (
     meetings,
     newsletters,
     openings,
+    plan_links,
 )
 
 OPPORTUNITY_LABEL = "Opportunité emplacements"
+WIDE_COMMENT = 80  # résumé de rendez-vous au-delà duquel la carte prend toute la largeur
 
 
 class EmptyNewsletterError(ValueError):
@@ -81,11 +83,46 @@ class OpeningItem:
 
 @dataclass(frozen=True)
 class MeetingItem:
-    """Enseigne rencontrée (rubrique 4)."""
+    """Enseigne rencontrée (rubrique 4) ; comment = résumé du rendez-vous (plusieurs
+    lignes possibles)."""
 
     brand: str
     date_label: str | None
     comment: str | None
+
+    @property
+    def comment_lines(self) -> tuple[str, ...]:
+        """Résumé découpé en lignes (affichées avec des retours à la ligne)."""
+        return tuple(self.comment.split("\n")) if self.comment else ()
+
+    @property
+    def wide(self) -> bool:
+        """Vrai si un vrai résumé accompagne la rencontre (plusieurs lignes, ou plus de
+        WIDE_COMMENT caractères) : la carte prend toute la largeur."""
+        return bool(self.comment) and (
+            "\n" in self.comment or len(self.comment) > WIDE_COMMENT  # type: ignore[arg-type]
+        )
+
+
+def meeting_rows(items: tuple[MeetingItem, ...]) -> tuple[tuple[MeetingItem, ...], ...]:
+    """Rangées de l'e-mail : une rencontre avec résumé occupe seule sa rangée ; les autres
+    vont par deux, dans l'ordre choisi."""
+    rows: list[tuple[MeetingItem, ...]] = []
+    pending: list[MeetingItem] = []
+    for item in items:
+        if item.wide:
+            if pending:
+                rows.append(tuple(pending))
+                pending = []
+            rows.append((item,))
+        else:
+            pending.append(item)
+            if len(pending) == 2:
+                rows.append(tuple(pending))
+                pending = []
+    if pending:
+        rows.append(tuple(pending))
+    return tuple(rows)
 
 
 @dataclass(frozen=True)
@@ -146,6 +183,11 @@ class Section:
     def hidden(self) -> bool:
         """Vrai si la rubrique est vide (elle n'est alors pas publiée)."""
         return not self.items
+
+    @property
+    def meeting_rows(self) -> tuple[tuple[MeetingItem, ...], ...]:
+        """Rangées des rencontres pour l'e-mail (voir meeting_rows)."""
+        return meeting_rows(tuple(i for i in self.items if isinstance(i, MeetingItem)))
 
 
 @dataclass(frozen=True)
@@ -287,14 +329,10 @@ def build_newsletter_view(
         )
         for f in franchisees.list_for_newsletter(conn, nid, validated_only=True)
     )
-    plans_items: tuple[PlansItem, ...] = ()
-    if newsletter.development_plans_url:
-        plans_items = (
-            PlansItem(
-                url=newsletter.development_plans_url,
-                label=newsletter.development_plans_label or DEFAULT_PLANS_LABEL,
-            ),
-        )
+    plans_items = tuple(
+        PlansItem(url=link.url, label=link.display_label)
+        for link in plan_links.list_for_newsletter(conn, nid)
+    )
 
     raw_sections = (
         Section("rubrique_1", 1, titles["rubrique_1"], "articles", article_items(1)),

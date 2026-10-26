@@ -18,6 +18,7 @@ import io
 import json
 import shutil
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from email.message import EmailMessage
@@ -29,6 +30,7 @@ from markupsafe import Markup
 from PIL import Image, ImageOps
 
 from news_franchise.config import Settings
+from news_franchise.newsletter.pdf import PdfError
 from news_franchise.newsletter.shapes import SHAPES, motif_png, shape_png
 from news_franchise.newsletter.theme import SECTION_KEYS, Theme, load_theme
 from news_franchise.newsletter.view import (
@@ -45,7 +47,11 @@ from news_franchise.newsletter.view import (
 EMAIL_WIDTH = 600
 GMAIL_CLIP_BYTES = 102 * 1024  # au-delà, Gmail tronque le message (« Message tronqué »)
 GMAIL_CLIP_MARGIN = 92 * 1024  # avertissement avant la limite
-PACKAGE_FORMAT = "news-franchise-email/2"
+PACKAGE_FORMAT = "news-franchise-email/3"
+# Adresse provisoire du bouton « Imprimer la newsletter » : le script Apps Script la
+# remplace par le lien du PDF déposé dans Google Drive, avant de créer le brouillon.
+PRINT_LINK_TOKEN = "NF-LIEN-PDF-A-REMPLACER"
+MAX_LINE_BYTES = 900  # norme des e-mails : 998 octets au plus par ligne
 MAIN_PHOTO_SIZE = (520, 480)  # affichée en 260 × 240 (écrans haute densité)
 THUMB_SIZE = (184, 140)  # affichée en 92 × 70
 JPEG_QUALITY = 80
@@ -73,6 +79,12 @@ class EmailExport:
     text: str
     images: tuple[EmailImage, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    print_pdf: bytes | None = None  # version à imprimer (bouton « Imprimer » de l'e-mail)
+
+    @property
+    def print_pdf_name(self) -> str:
+        """Nom du PDF à imprimer (news-franchise-AAAA-MM.pdf)."""
+        return f"news-franchise-{self.month}.pdf"
 
     @property
     def html_size(self) -> int:
@@ -266,9 +278,11 @@ class _Images:
 # --------------------------------------------------------------------------- texte
 
 
-def _text_version(view: NewsletterView, theme: Theme) -> str:
+def _text_version(view: NewsletterView, theme: Theme, print_href: str | None = None) -> str:
     """Version texte de l'e-mail (lecteurs sans HTML, aperçus de notification)."""
     lines = [f"{theme.name.upper()} — {view.month_label}", theme.tagline, ""]
+    if print_href:
+        lines += [f"Imprimer la newsletter (PDF) : {print_href}", ""]
     lines.append(view.front_title.upper())
     lines.append(" · ".join(f"{f.value} {f.label}" for f in view.front))
     for section in view.visible_sections:
@@ -286,6 +300,7 @@ def _text_version(view: NewsletterView, theme: Theme) -> str:
             elif isinstance(item, MeetingItem):
                 when = f" ({item.date_label})" if item.date_label else ""
                 lines.append(f"- {item.brand}{when}")
+                lines += [f"  {line}" for line in item.comment_lines if line]
             elif isinstance(item, FranchiseeItem):
                 details = " · ".join(
                     part for part in (item.brands, item.location, item.store_count_label) if part
@@ -302,15 +317,31 @@ def _text_version(view: NewsletterView, theme: Theme) -> str:
 
 
 def build_email(
-    conn: sqlite3.Connection, month: str, settings: Settings, theme: Theme | None = None
+    conn: sqlite3.Connection,
+    month: str,
+    settings: Settings,
+    theme: Theme | None = None,
+    make_print_pdf: Callable[[NewsletterView, Theme], bytes] | None = None,
 ) -> EmailExport:
     """Prépare l'e-mail du mois AAAA-MM (doit être appelé dans un contexte Flask, pour les
     gabarits). Seuls les éléments retenus et validés y figurent, comme dans l'aperçu.
+
+    make_print_pdf fabrique la version PDF à imprimer : l'e-mail porte alors un bouton
+    « Imprimer la newsletter » (lien provisoire PRINT_LINK_TOKEN, remplacé par le script
+    Apps Script par le lien du PDF dans Google Drive). Si la fabrication échoue (PdfError),
+    l'e-mail est préparé sans ce bouton, avec un avertissement.
 
     Lève NewsletterNotFoundError, EmptyNewsletterError ou ThemeError (messages en français).
     """
     theme = theme or load_theme()
     view = build_newsletter_view(conn, month, settings, theme)
+    warnings: list[str] = []
+    print_pdf: bytes | None = None
+    if make_print_pdf is not None:
+        try:
+            print_pdf = make_print_pdf(view, theme)
+        except PdfError as exc:
+            warnings.append(f"E-mail préparé sans bouton « Imprimer » : {exc}")
     images = _Images()
     accents = {key: theme.accent(key) for key in SECTION_KEYS}
 
@@ -360,13 +391,14 @@ def build_email(
         "width": EMAIL_WIDTH,
     }
 
-    def render(src: dict[str, str]) -> str:
+    def render(src: dict[str, str], print_href: str | None) -> str:
         def to(cid: str) -> str:
             return src[cid]
 
         return render_template(
             "newsletter/email.html",
             **context,
+            print_href=print_href,
             logo_src=to(logo),
             logo_reverse_src=to(logo_reverse),
             motif_src=to(motif),
@@ -375,24 +407,44 @@ def build_email(
             photo_src={name: to(cid) for name, cid in photos.items()},
         )
 
-    html = render({cid: f"cid:{cid}" for cid in images.items})
-    browser_html = render({cid: f"images/{image.file_name}" for cid, image in images.items.items()})
+    token = PRINT_LINK_TOKEN if print_pdf else None
+    html = render({cid: f"cid:{cid}" for cid in images.items}, token)
+    browser_html = render(
+        {cid: f"images/{image.file_name}" for cid, image in images.items.items()},
+        f"news-franchise-{view.month}.pdf" if print_pdf else None,
+    )
     export = EmailExport(
         month=view.month,
         subject=subject,
         preheader=preheader,
         html=html,
         browser_html=browser_html,
-        text=_text_version(view, theme),
+        text=_text_version(view, theme, token),
         images=tuple(images.items.values()),
+        print_pdf=print_pdf,
     )
-    warnings: list[str] = []
     if export.html_size > GMAIL_CLIP_MARGIN:
         warnings.append(
             f"Le HTML pèse {size_label(export.html_size)} : Gmail tronque les messages au-delà "
             "de 102 Ko (« Message tronqué »). Retirez quelques articles."
         )
     return replace(export, warnings=tuple(warnings))
+
+
+def _short_lines(text: str) -> str:
+    """Texte dont aucune ligne ne dépasse MAX_LINE_BYTES octets (norme des e-mails) :
+    les lignes trop longues sont coupées entre deux balises, sinon sur une espace."""
+    lines: list[str] = []
+    for line in text.split("\n"):
+        while len(line.encode("utf-8")) > MAX_LINE_BYTES:
+            head = line[:MAX_LINE_BYTES]
+            cut = max(head.rfind("><") + 1, head.rfind(" "))
+            if cut <= 0:
+                break  # rien à couper proprement (cas théorique) : la ligne reste longue
+            lines.append(line[:cut])
+            line = line[cut:].lstrip(" ")
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def mime_message(export: EmailExport) -> bytes:
@@ -404,11 +456,14 @@ def mime_message(export: EmailExport) -> bytes:
     jointes par GmailApp.createDraft(… inlineImages …) n'y apparaissent pas toujours.
     Pas d'expéditeur ni de destinataire : Gmail met votre adresse, vous ajoutez les
     destinataires dans le brouillon.
+
+    Texte et HTML sont en « 8bit » (UTF-8 lisible tel quel, lignes courtes) : le script Apps
+    Script peut ainsi y remplacer PRINT_LINK_TOKEN par le lien du PDF.
     """
     message = EmailMessage(policy=SMTP)
     message["Subject"] = export.subject
-    message.set_content(export.text, subtype="plain", charset="utf-8")
-    message.add_alternative(export.html, subtype="html", charset="utf-8")
+    message.set_content(_short_lines(export.text), subtype="plain", charset="utf-8", cte="8bit")
+    message.add_alternative(_short_lines(export.html), subtype="html", charset="utf-8", cte="8bit")
     html_part = message.get_payload()[1]
     for image in export.images:
         maintype, subtype = image.mime_type.split("/")
@@ -425,14 +480,24 @@ def mime_message(export: EmailExport) -> bytes:
 
 def package_json(export: EmailExport, created_at: datetime | None = None) -> str:
     """Paquet lu par le script Apps Script : message MIME complet (« raw », base64 URL,
-    comme l'attend l'API Gmail), et pour information l'objet, le HTML, le texte et les
-    images (base64)."""
+    comme l'attend l'API Gmail), PDF à imprimer et lien provisoire à remplacer (s'il y a un
+    bouton « Imprimer »), et pour information l'objet, le HTML, le texte et les images."""
     created_at = created_at or datetime.now(UTC)
     payload = {
         "format": PACKAGE_FORMAT,
         "month": export.month,
         "createdAt": created_at.isoformat(timespec="seconds"),
         "raw": base64.urlsafe_b64encode(mime_message(export)).decode("ascii"),
+        "printLinkToken": PRINT_LINK_TOKEN if export.print_pdf else None,
+        "printPdf": (
+            {
+                "fileName": export.print_pdf_name,
+                "mimeType": "application/pdf",
+                "data": base64.b64encode(export.print_pdf).decode("ascii"),
+            }
+            if export.print_pdf
+            else None
+        ),
         "subject": export.subject,
         "htmlBody": export.html,
         "textBody": export.text,
@@ -463,7 +528,9 @@ def write_email_export(export: EmailExport, settings: Settings) -> ExportFiles:
     """Écrit l'export (le précédent du même mois est remplacé) :
 
     - news-franchise-AAAA-MM.html et images/ : l'e-mail à ouvrir dans un navigateur ;
-    - news-franchise-AAAA-MM.eml : le message complet (s'ouvre avec Outlook ou Thunderbird) ;
+    - news-franchise-AAAA-MM.eml : le message complet (s'ouvre avec Outlook ou Thunderbird ;
+      le bouton « Imprimer » n'y a pas encore son lien, posé par le script Apps Script) ;
+    - news-franchise-AAAA-MM.pdf : la version à imprimer, s'il y en a une ;
     - news-franchise-AAAA-MM.json : le paquet pour le script Apps Script, copié aussi dans
       le dossier Google Drive (NF_DRIVE_DIR) s'il est configuré.
     """
@@ -476,6 +543,8 @@ def write_email_export(export: EmailExport, settings: Settings) -> ExportFiles:
     html_path = folder / f"news-franchise-{export.month}.html"
     html_path.write_text(export.browser_html, encoding="utf-8")
     (folder / f"news-franchise-{export.month}.eml").write_bytes(mime_message(export))
+    if export.print_pdf:
+        (folder / export.print_pdf_name).write_bytes(export.print_pdf)
     package = folder / package_name(export.month)
     package.write_text(package_json(export), encoding="utf-8")
     drive_copy = None

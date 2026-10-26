@@ -68,6 +68,7 @@ La configuration se fait par variables d'environnement, ou plus simplement dans 
 | `NF_OPEN_BROWSER` | Ouvrir le navigateur au lancement | `true` |
 | `NF_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
 | `NF_DRIVE_DIR` | dossier Google Drive synchronisé (facultatif) où copier le paquet de l'e-mail | vide (copie manuelle) |
+| `NF_BROWSER` | navigateur (Edge ou Chrome) qui fabrique le PDF à imprimer | vide (recherche automatique) |
 
 Une valeur invalide arrête l'application avec un message qui nomme la variable fautive. Le fichier `.env` n'est pas versionné : n'y mettez rien qui doive être partagé. Aucun secret n'est écrit dans le code.
 
@@ -268,7 +269,7 @@ Elles sont rangées dans `%LOCALAPPDATA%\NewsFranchise\photos\AAAA-MM\`, sous un
 
 ### 4. Enseignes rencontrées
 
-- **Ajouter une enseigne rencontrée** : l'enseigne (la liste des 15 enseignes est proposée pendant la frappe, mais tout nom est accepté), la date et un commentaire de 200 caractères, tous deux facultatifs.
+- **Ajouter une enseigne rencontrée** : l'enseigne (la liste des 15 enseignes est proposée pendant la frappe, mais tout nom est accepté), la date et un **résumé du rendez-vous** pour les équipes (jusqu'à 1 000 caractères, retours à la ligne conservés), tous deux facultatifs. Dans la newsletter, une rencontre avec un résumé prend toute la largeur.
 - **Ajout rapide** : collez une liste, **une enseigne par ligne**.
   - Les lignes vides sont ignorées.
   - Les enseignes déjà présentes ce mois-ci sont ignorées et signalées, sans tenir compte des majuscules ni des accents : « Pokawa » et « pokawa » sont un doublon.
@@ -276,9 +277,9 @@ Elles sont rangées dans `%LOCALAPPDATA%\NewsFranchise\photos\AAAA-MM\`, sous un
 
 ### 6. Plans de développement
 
-Saisissez **le lien** vers les plans de développement : un seul par newsletter, souvent un document SharePoint ou Google Drive. Ajoutez si vous voulez un **libellé** ; par défaut ce sera « Voir les plans de développement ».
+Saisissez **jusqu'à 6 liens**, par exemple un par région, chacun avec son **libellé** (« Plans Île-de-France »…) ; un libellé vide donne « Voir les plans de développement ». Ce sont souvent des documents SharePoint ou Google Drive. Les lignes vides sont ignorées ; la newsletter affiche un bouton par lien, dans l'ordre des lignes.
 
-L'application vérifie seulement que l'adresse commence par `http://` ou `https://`. Elle n'appelle jamais le lien, qui demande souvent une connexion. Testez-le vous-même avec **Ouvrir le lien**. **Retirer le lien** l'enlève.
+L'application vérifie seulement que chaque adresse commence par `http://` ou `https://`. Elle n'appelle jamais les liens, qui demandent souvent une connexion. Testez-les vous-même avec **Ouvrir**. **Retirer tous les liens** les enlève.
 
 ### Avant de marquer la newsletter comme relue
 
@@ -334,6 +335,12 @@ tableaux de 600 px, images jointes au message, version texte), et un **paquet**
 script `apps_script/brouillon_gmail.gs`, qui crée un **brouillon Gmail** : il ne reste qu'à
 ajouter les destinataires et envoyer. Rien n'est envoyé automatiquement, et l'application
 ne stocke aucun identifiant Google.
+
+L'e-mail porte un bouton **« Imprimer la newsletter (PDF) »** : un e-mail ne peut pas lancer
+l'impression lui-même, le bouton ouvre donc la version PDF, que le lecteur imprime.
+L'application fabrique ce PDF avec le navigateur du poste (Edge, installé avec Windows, ou
+Chrome ; `NF_BROWSER` pour en indiquer un autre) ; le script le dépose dans le dossier Drive,
+le partage en lecture aux personnes de l'organisation qui ont le lien, et le relie au bouton.
 
 La page d'export affiche la taille du HTML (Gmail tronque au-delà de 102 Ko : un
 avertissement s'affiche avant), les images jointes et l'e-mail tel qu'il sera reçu.

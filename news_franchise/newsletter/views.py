@@ -42,6 +42,7 @@ from news_franchise.newsletter.email import (
     size_label,
     write_email_export,
 )
+from news_franchise.newsletter.pdf import newsletter_pdf
 from news_franchise.newsletter.qr import qr_svg
 from news_franchise.newsletter.shapes import SHAPES, motif_svg, shape_svg
 from news_franchise.newsletter.theme import (
@@ -213,6 +214,7 @@ class EmailExportInfo:
     images_size: int
     package: Path
     html: Path
+    pdf: Path | None  # version à imprimer (bouton « Imprimer » de l'e-mail), s'il y en a une
 
     @property
     def html_size_label(self) -> str:
@@ -246,6 +248,7 @@ def _export_info(settings: Settings, month: str) -> EmailExportInfo | None:
             images_size=sum(len(base64.b64decode(image["data"])) for image in images),
             package=package,
             html=folder / f"news-franchise-{month}.html",
+            pdf=pdf if (pdf := folder / f"news-franchise-{month}.pdf").is_file() else None,
         )
     except OSError, ValueError, KeyError, TypeError:
         return None
@@ -301,7 +304,13 @@ def export_email(month: str) -> ResponseReturnValue:
     except ThemeError as exc:
         return _theme_error_page(exc)
     try:
-        export = build_email(get_db(), newsletter.month, settings, theme)
+        export = build_email(
+            get_db(),
+            newsletter.month,
+            settings,
+            theme,
+            make_print_pdf=lambda view, current: newsletter_pdf(view, current, settings),
+        )
         files = write_email_export(export, settings)
     except EmptyNewsletterError as exc:
         flash(str(exc), "error")
@@ -354,6 +363,17 @@ def export_email_preview(month: str) -> ResponseReturnValue:
 def export_email_image(month: str, name: str) -> ResponseReturnValue:
     """Image de l'e-mail exporté (noms produits par l'application uniquement)."""
     return send_file(_export_file(month, "images", name), max_age=0)
+
+
+@bp.get("/newsletters/<month>/export/email/<name>.pdf")
+def export_email_pdf(month: str, name: str) -> ResponseReturnValue:
+    """Version PDF à imprimer (celle que le bouton « Imprimer » de l'e-mail ouvrira)."""
+    newsletter = _month_or_404(month)
+    if name != f"news-franchise-{newsletter.month}":
+        abort(404)
+    return send_file(
+        _export_file(newsletter.month, f"{name}.pdf"), mimetype="application/pdf", max_age=0
+    )
 
 
 @bp.get("/newsletters/<month>/export/email/paquet")

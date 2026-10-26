@@ -22,6 +22,7 @@ newsletters ─┬─< articles >──── brands
              ├─< franchisees
              ├─< openings ─< opening_photos
              ├─< meetings
+             ├─< development_plan_links
              └─< collection_runs
 ```
 `─<` : « un à plusieurs ». Toutes les relations depuis `newsletters` (et `openings` → `opening_photos`) sont en `ON DELETE CASCADE`.
@@ -32,8 +33,8 @@ newsletters ─┬─< articles >──── brands
 | `id` | INTEGER | clé primaire |
 | `month` | TEXT | `AAAA-MM`, unique, mois 01 à 12 |
 | `status` | TEXT | `draft` (défaut), `reviewed`, `exported` |
-| `development_plans_url` | TEXT | rubrique 6 ; nullable ; http(s) (format vérifié, jamais appelé) |
-| `development_plans_label` | TEXT | libellé du lien, ≤ 100 caractères ; NULL = « Voir les plans de développement » (migration 0007) |
+| `development_plans_url` | TEXT | abandonnée depuis la migration 0008 (toujours NULL) : voir `development_plan_links` |
+| `development_plans_label` | TEXT | abandonnée depuis la migration 0008 (toujours NULL) |
 | `created_at`, `updated_at` | TEXT | ISO 8601 |
 
 ### `brands`: référentiel des enseignes (synchronisé depuis `config/enseignes.yaml`)
@@ -113,7 +114,10 @@ newsletters ─┬─< articles >──── brands
 - **Affichage** : la route `/photos/<nom>` ne sert que des fichiers `.jpg` du dossier `photos/` ; tout chemin contenant `..`, `\` ou absolu renvoie 404.
 
 ### `meetings`: enseignes rencontrées (rubrique 4)
-`id`, `newsletter_id` (CASCADE), `brand_name` (obligatoire), `meeting_date` (nullable), `comment` (nullable), `position`.
+`id`, `newsletter_id` (CASCADE), `brand_name` (obligatoire), `meeting_date` (nullable), `comment` (nullable : résumé du rendez-vous, 1 000 caractères au plus, retours à la ligne conservés), `position`.
+
+### `development_plan_links`: liens des plans de développement (rubrique 6)
+`id`, `newsletter_id` (CASCADE), `position` (1 à 6, unique par newsletter), `label` (nullable, ≤ 100 caractères ; NULL = « Voir les plans de développement »), `url` (http(s) ; format vérifié, jamais appelé). Un lien par région, par exemple (migration 0008).
 
 ### `collection_runs`: exécutions de la collecte
 `id`, `newsletter_id` (CASCADE), `started_at`, `finished_at` (nullable), `status` (`running`, `success`, `partial`, `failed`), `stats` (JSON), `errors` (liste JSON de phrases en français).
@@ -131,12 +135,13 @@ Index : clés étrangères, `(newsletter_id, rubric, position)` sur `articles`, 
 
 | Module | Fonctions |
 |---|---|
-| `newsletters` | `get_or_create`, `get`, `get_by_id`, `list_all`, `set_status`, `set_development_plans_url`, `delete`, `front_page_figures` |
+| `newsletters` | `get_or_create`, `get`, `get_by_id`, `list_all`, `set_status`, `delete`, `front_page_figures` |
 | `brands` | `sync_from_yaml`, `list_all`, `get`, `get_by_name`, `get_by_slug` |
 | `articles` | `add` (renvoie `None` si l'URL existe déjà ce mois-ci), `get`, `list_for_rubric`, `list_for_newsletter`, `update`, `set_selected`, `set_opportunity` (à la main), `apply_auto_opportunity` (détection), `reorder`, `delete` |
 | `franchisees` | `add`, `get`, `list_for_newsletter`, `update` (marque la fiche `edited`), `set_validated`, `set_dismissed`, `apply_auto_update` et `delete_stale_suggestions` (détection), `reorder`, `delete` |
 | `openings` | `add`, `get`, `list_for_newsletter`, `update`, `reorder`, `delete`, `add_photo`, `get_photo`, `list_photos`, `reorder_photos`, `delete_photo` (supprime aussi le fichier) |
 | `meetings` | `add`, `get`, `list_for_newsletter`, `update`, `reorder`, `delete` |
+| `plan_links` | `list_for_newsletter`, `replace_all`, `count` |
 | `collection_runs` | `start`, `finish`, `get`, `last_for_newsletter`, `list_running` |
 
 Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion de la requête s'obtient par `news_franchise.db.connection.get_db()` ; ailleurs, par `get_connection(settings)` (à fermer après usage). Les connexions sont en autocommit ; pour grouper plusieurs écritures, utiliser `with transaction(conn):`.
@@ -152,6 +157,7 @@ Chaque fonction prend la connexion en premier argument. Dans Flask, la connexion
 | `0005_article_brand_label.sql` | Colonne `articles.brand_label` (enseigne « Autre ») |
 | `0006_article_user_verified.sql` | Colonne `articles.link_verified_by_user` (« lien vérifié par l'utilisateur ») |
 | `0007_development_plans_label.sql` | Colonne `newsletters.development_plans_label` (libellé du lien des plans) |
+| `0008_development_plan_links.sql` | Table `development_plan_links` (jusqu'à 6 liens des plans) ; l'ancien lien unique y devient le lien n° 1 |
 
 ## Ajouter une migration
 

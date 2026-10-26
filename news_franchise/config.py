@@ -42,6 +42,8 @@ class Settings:
         log_level : niveau de journalisation (DEBUG, INFO, WARNING, ERROR, CRITICAL).
         drive_dir : dossier Google Drive synchronisé sur le poste (facultatif) où copier
             le fichier d'e-mail lu par le script Apps Script ; None = copie manuelle.
+        browser : navigateur (Edge ou Chrome) qui fabrique la version PDF à imprimer ;
+            None = recherche automatique aux emplacements habituels.
     """
 
     data_dir: Path
@@ -51,6 +53,7 @@ class Settings:
     open_browser: bool = True
     log_level: str = "INFO"
     drive_dir: Path | None = None
+    browser: Path | None = None
 
     def __post_init__(self) -> None:
         """Vérifie les invariants qui ne dépendent pas de la source de configuration."""
@@ -152,6 +155,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         open_browser=_parse_bool(env, "NF_OPEN_BROWSER", default=True),
         log_level=_parse_log_level(env),
         drive_dir=_parse_drive_dir(env),
+        browser=_parse_browser(env),
     )
     ensure_data_dir(settings.data_dir)
     return settings
@@ -170,6 +174,21 @@ def _parse_drive_dir(env: Mapping[str, str]) -> Path | None:
             "variable vide pour copier le fichier à la main."
         )
     return path.resolve()
+
+
+def _parse_browser(env: Mapping[str, str]) -> Path | None:
+    """Lit NF_BROWSER : chemin du programme Edge ou Chrome (fichier existant)."""
+    raw = _get(env, "NF_BROWSER")
+    if raw is None:
+        return None
+    path = Path(raw.strip('"')).expanduser()
+    if not path.is_file():
+        raise ConfigError(
+            f"NF_BROWSER : le fichier {path} n'existe pas. Indiquez le programme Edge ou Chrome "
+            "(ex. C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe), "
+            "ou laissez la variable vide pour une recherche automatique."
+        )
+    return path
 
 
 def _get(env: Mapping[str, str], name: str) -> str | None:

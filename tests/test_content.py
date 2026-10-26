@@ -16,7 +16,7 @@ from PIL import Image
 from news_franchise.config import Settings
 from news_franchise.content.photos import MAX_SIDE, PhotoError, process_photo
 from news_franchise.models import Franchisee, Meeting, Newsletter, Opening
-from news_franchise.repositories import franchisees, meetings, newsletters, openings
+from news_franchise.repositories import franchisees, meetings, newsletters, openings, plan_links
 from news_franchise.tools import demo
 from tests.helpers import post_form
 
@@ -345,9 +345,24 @@ def test_meetings_unit_and_quick_add(
     post_form(
         client,
         f"{BASE}/rencontres/{crepe.id}",
-        {"enseigne": "Crêpe Touch", "commentaire": "x" * 201},
+        {"enseigne": "Crêpe Touch", "commentaire": "x" * 1001},
     )
     assert meetings.get(conn, crepe.id).comment is None  # type: ignore[union-attr, arg-type]
+    # Résumé de rendez-vous sur plusieurs lignes : lignes gardées, espaces superflus retirés.
+    summary = (
+        "Rendez-vous avec le directeur du développement.\r\n\r\n\r\n  Cherche 3 sites  en IDF.  "
+    )
+    post_form(
+        client, f"{BASE}/rencontres/{crepe.id}", {"enseigne": "Crêpe Touch", "commentaire": summary}
+    )
+    assert meetings.get(conn, crepe.id).comment == (  # type: ignore[union-attr, arg-type]
+        "Rendez-vous avec le directeur du développement.\n\nCherche 3 sites en IDF."
+    )
+    html = _html(client.get(f"{BASE}/rencontres"))
+    assert 'class="meeting-summary"' in html and "<textarea" in html
+    post_form(
+        client, f"{BASE}/rencontres/{crepe.id}", {"enseigne": "Crêpe Touch", "commentaire": ""}
+    )
     post_form(
         client,
         f"{BASE}/rencontres/{crepe.id}",
@@ -361,36 +376,66 @@ def test_meetings_unit_and_quick_add(
 # --------------------------------------------------------------------------- plans
 
 
-def test_plans_link(
+def test_plans_links(
     client: FlaskClient,
     conn: sqlite3.Connection,
     newsletter: Newsletter,
     mock_http: respx.MockRouter,
 ) -> None:
-    link = "https://carmila.sharepoint.example/sites/franchise/plans.pdf"
-    response = post_form(client, f"{BASE}/plans/enregistrer", {"lien": link, "libelle": ""})
-    assert response.status_code == 302
-    assert len(mock_http.calls) == 0  # le lien n'est jamais appelé
-    saved = newsletters.get(conn, "2026-10")
-    assert saved is not None and saved.development_plans_url == link
-    assert saved.development_plans_label is None
+    assert newsletter.id is not None
+    idf = "https://carmila.sharepoint.example/sites/franchise/plans-idf.pdf"
+    sud = "https://carmila.sharepoint.example/sites/franchise/plans-sud.pdf"
     html = _html(client.get(f"{BASE}/plans"))
-    assert "Voir les plans de développement" in html and "Ouvrir le lien" in html
+    assert html.count('name="lien_') == 6 and html.count('name="libelle_') == 6
+
+    # Lignes 1 et 3 remplies, ligne 2 vide (ignorée) ; libellé vide = libellé par défaut.
+    response = post_form(
+        client,
+        f"{BASE}/plans/enregistrer",
+        {"lien_1": idf, "libelle_1": "Plans Île-de-France", "lien_3": sud, "libelle_3": ""},
+    )
+    assert response.status_code == 302
+    assert len(mock_http.calls) == 0  # les liens ne sont jamais appelés
+    saved = plan_links.list_for_newsletter(conn, newsletter.id)
+    assert [(link.position, link.url, link.display_label) for link in saved] == [
+        (1, idf, "Plans Île-de-France"),
+        (3, sud, "Voir les plans de développement"),
+    ]
+    html = _html(client.get(f"{BASE}/plans"))
+    assert "2 liens dans la newsletter" in html and html.count("Ouvrir ↗") == 2
 
     for bad in ("javascript:alert(1)", "ftp://serveur/plans.pdf", "plans.pdf"):
         refused = post_form(
-            client, f"{BASE}/plans/enregistrer", {"lien": bad, "libelle": "Mes plans"}
+            client,
+            f"{BASE}/plans/enregistrer",
+            {"lien_1": idf, "libelle_1": "IDF", "lien_4": bad, "libelle_4": "Ouest"},
         )
         assert refused.status_code == 400, bad
-        assert 'id="plans-lien-err"' in _html(refused) and 'value="Mes plans"' in _html(refused)
-    assert newsletters.get(conn, "2026-10").development_plans_url == link  # type: ignore[union-attr]
+        page = _html(refused)
+        assert 'id="plans-lien-4-err"' in page and 'value="Ouest"' in page
+    # Libellé sans lien : refusé.
+    refused = post_form(client, f"{BASE}/plans/enregistrer", {"libelle_2": "Nord"})
+    assert refused.status_code == 400 and 'id="plans-lien-2-err"' in _html(refused)
+    assert len(plan_links.list_for_newsletter(conn, newsletter.id)) == 2  # inchangé
 
-    post_form(client, f"{BASE}/plans/enregistrer", {"lien": link, "libelle": "Plans 2027"})
-    assert newsletters.get(conn, "2026-10").development_plans_label == "Plans 2027"  # type: ignore[union-attr]
     post_form(client, f"{BASE}/plans/retirer", {})
-    cleared = newsletters.get(conn, "2026-10")
-    assert cleared is not None and cleared.development_plans_url is None
-    assert cleared.development_plans_label is None
+    assert plan_links.list_for_newsletter(conn, newsletter.id) == []
+
+
+def test_six_plan_links_in_newsletter(
+    client: FlaskClient, conn: sqlite3.Connection, newsletter: Newsletter
+) -> None:
+    assert newsletter.id is not None
+    form = {
+        **{f"lien_{n}": f"https://example.com/plans/region-{n}" for n in range(1, 7)},
+        **{f"libelle_{n}": f"Plans région {n}" for n in range(1, 7)},
+    }
+    assert post_form(client, f"{BASE}/plans/enregistrer", form).status_code == 302
+    html = _html(client.get(f"{BASE}/apercu"))
+    for n in range(1, 7):
+        assert f'href="https://example.com/plans/region-{n}"' in html
+        assert f"Plans région {n} →" in html
+    assert "6 liens" in html  # sommaire
 
 
 # ------------------------------------------------------------------------ statut et démonstration
@@ -413,10 +458,10 @@ def test_demo_internal_content(settings: Settings, conn: sqlite3.Connection, app
     brands.sync_from_yaml(conn)
     assert demo.main([], settings=settings, out=lambda _: None) == 0
     newsletter = newsletters.get(conn, "2000-01")
-    assert (
-        newsletter is not None
-        and newsletter.development_plans_url == "https://example.com/demo/plans"
-    )
+    assert newsletter is not None and newsletter.id is not None
+    demo_plans = plan_links.list_for_newsletter(conn, newsletter.id)
+    assert [link.url for link in demo_plans][0] == "https://example.com/demo/plans"
+    assert len(demo_plans) == 3
     demo_openings = openings.list_for_newsletter(conn, newsletter.id)  # type: ignore[arg-type]
     assert len(demo_openings) == 2
     assert [len(openings.list_photos(conn, o.id)) for o in demo_openings] == [2, 1]  # type: ignore[arg-type]

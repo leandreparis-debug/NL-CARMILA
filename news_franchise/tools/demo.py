@@ -5,7 +5,7 @@ Usage : python -m news_franchise.tools.demo [--reset]
 Crée la newsletter du mois fictif 2000-01 (et seulement celui-ci) avec des articles
 clairement marqués « [DÉMO] », dont les liens pointent vers https://example.com/demo/…,
 deux ouvertures avec des photos générées (marquées « DÉMO »), quatre enseignes
-rencontrées et un lien de plans de démonstration.
+rencontrées (dont une avec un résumé de rendez-vous) et trois liens de plans régionaux.
 Ces textes sont inventés pour la démonstration : ils ne décrivent aucun fait réel. La
 détection (opportunités, franchisés) est ensuite lancée sur ce mois.
 """
@@ -29,8 +29,15 @@ from news_franchise.db import DatabaseError
 from news_franchise.db.connection import get_connection
 from news_franchise.detect.runner import run_detection
 from news_franchise.fonts import system_font
-from news_franchise.models import Article, Meeting, Opening, OpeningPhoto
-from news_franchise.repositories import articles, brands, meetings, newsletters, openings
+from news_franchise.models import Article, Meeting, Opening, OpeningPhoto, PlanLink
+from news_franchise.repositories import (
+    articles,
+    brands,
+    meetings,
+    newsletters,
+    openings,
+    plan_links,
+)
 
 DEMO_MONTH = "2000-01"
 DEMO_SOURCE = "Source de démonstration"
@@ -148,7 +155,13 @@ DEMO_OPENINGS: tuple[tuple[str, str, int, str, tuple[tuple[int, int, int], ...]]
     ),
 )
 DEMO_MEETINGS: tuple[tuple[str, int, str], ...] = (
-    ("Leonidas", 8, "Exemple fictif : point sur les emplacements disponibles."),
+    (
+        "Leonidas",
+        8,
+        "Exemple fictif : rendez-vous avec le responsable du développement.\n"
+        "L'enseigne cherche 3 emplacements en galerie dans le Sud-Ouest d'ici fin d'année ; "
+        "envoi de la liste des cellules disponibles prévu la semaine prochaine.",
+    ),
     ("Chopstix", 14, "Exemple fictif : premier contact."),
     ("Yogurt Factory", 21, ""),
     ("Une enseigne de démonstration", 27, "Exemple fictif."),
@@ -226,11 +239,29 @@ def _build_internal_content(conn: object, settings: Settings, newsletter_id: int
                 comment=comment or None,
             ),
         )
-    newsletters.set_development_plans(
-        conn,
+    plan_links.replace_all(
+        conn,  # type: ignore[arg-type]
         newsletter_id,
-        DEMO_PLANS_URL,
-        "[DÉMO] Voir les plans de développement",  # type: ignore[arg-type]
+        [
+            PlanLink(
+                newsletter_id=newsletter_id,
+                position=1,
+                url=DEMO_PLANS_URL,
+                label="[DÉMO] Plans Île-de-France",
+            ),
+            PlanLink(
+                newsletter_id=newsletter_id,
+                position=2,
+                url=f"{DEMO_PLANS_URL}/sud-ouest",
+                label="[DÉMO] Plans Sud-Ouest",
+            ),
+            PlanLink(
+                newsletter_id=newsletter_id,
+                position=3,
+                url=f"{DEMO_PLANS_URL}/sud-est",
+                label="[DÉMO] Plans Sud-Est",
+            ),
+        ],
     )
 
 

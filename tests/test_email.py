@@ -245,7 +245,11 @@ def test_apps_script_matches_package_format() -> None:
     script = (PROJECT / "apps_script" / "brouillon_gmail.gs").read_text(encoding="utf-8")
     assert f"const FORMAT_PAQUET = '{PACKAGE_FORMAT}';" in script
     # Brouillon créé à partir du message MIME complet (API Gmail), jamais envoyé.
-    assert "Gmail.Users.Drafts.create({ message: { raw: paquet.raw } }, 'me')" in script
+    assert "Gmail.Users.Drafts.create({ message: { raw: raw } }, 'me')" in script
+    # Bouton « Imprimer » : PDF déposé dans Drive, partagé, lien remplacé dans le message.
+    assert "deposerPdf_(dossier, paquet.printPdf)" in script
+    assert "remplacerLien_(raw, paquet.printLinkToken, lienPdf)" in script
+    assert "const PARTAGE_PDF = 'DOMAINE';" in script
     assert ".send(" not in script and "sendEmail" not in script
     manifest = json.loads((PROJECT / "apps_script" / "appsscript.json").read_text("utf-8"))
     services = manifest["dependencies"]["enabledAdvancedServices"]
@@ -343,3 +347,78 @@ def test_export_of_empty_month_explains(client: FlaskClient, newsletter: Newslet
     html = _html(post_form(client, "/newsletters/2026-10/export/email", follow_redirects=True))
     assert "encore vide" in html
     assert "Dernier e-mail préparé" not in html
+
+
+# --------------------------------------------------------------------------- bouton Imprimer
+
+FAKE_PDF = b"%PDF-1.4 version de test"
+
+
+def test_print_button_links_to_the_pdf(
+    app: Flask, conn: sqlite3.Connection, demo_settings: Settings
+) -> None:
+    with app.app_context():
+        export = build_email(conn, "2000-01", demo_settings, make_print_pdf=lambda v, t: FAKE_PDF)
+    token = email_module.PRINT_LINK_TOKEN
+    assert export.print_pdf == FAKE_PDF and export.warnings == ()
+    # Bouton en haut et lien en pied de page, vers le lien provisoire (remplacé par le script).
+    assert export.html.count(f'href="{token}"') == 2
+    assert "Imprimer la newsletter (PDF)" in export.html
+    assert f"Imprimer la newsletter (PDF) : {token}" in export.text
+    # Version navigateur : le bouton ouvre le PDF voisin.
+    assert export.browser_html.count('href="news-franchise-2000-01.pdf"') == 2
+
+    data = json.loads(package_json(export))
+    assert data["printLinkToken"] == token
+    assert data["printPdf"]["fileName"] == "news-franchise-2000-01.pdf"
+    assert base64.b64decode(data["printPdf"]["data"]) == FAKE_PDF
+    # Texte et HTML lisibles tels quels dans le message (8bit) : le script peut remplacer le
+    # lien provisoire ; lignes de moins de 998 octets (norme des e-mails).
+    raw = base64.urlsafe_b64decode(data["raw"])
+    assert raw.count(token.encode()) == 3
+    assert max(len(line) for line in raw.split(b"\r\n")) <= 998
+    message = message_from_bytes(raw, policy=policy.default)
+    for part in message.walk():
+        if part.get_content_maintype() == "text":
+            assert part["Content-Transfer-Encoding"] == "8bit"
+    # Remplacement tel que le fait le script : le message reste valide, images comprises.
+    link = "https://drive.google.com/file/d/abc/view?usp=drivesdk"
+    fixed = message_from_bytes(raw.replace(token.encode(), link.encode()), policy=policy.default)
+    html_part = next(p for p in fixed.walk() if p.get_content_type() == "text/html")
+    assert html_part.get_content().count(f'href="{link}"') == 2
+    images = [p for p in fixed.walk() if p.get_content_maintype() == "image"]
+    assert {p.get_content() for p in images} == {i.data for i in export.images}
+
+
+def test_no_print_button_without_pdf(
+    app: Flask, conn: sqlite3.Connection, demo_settings: Settings
+) -> None:
+    from news_franchise.newsletter.pdf import PdfError
+
+    def failing(view: object, theme: object) -> bytes:
+        raise PdfError("Aucun navigateur Edge ou Chrome trouvé.")
+
+    with app.app_context():
+        export = build_email(conn, "2000-01", demo_settings, make_print_pdf=failing)
+        plain = build_email(conn, "2000-01", demo_settings)
+    for result in (export, plain):
+        assert result.print_pdf is None
+        assert email_module.PRINT_LINK_TOKEN not in result.html + result.text
+        assert json.loads(package_json(result))["printPdf"] is None
+    assert len(export.warnings) == 1 and "sans bouton « Imprimer »" in export.warnings[0]
+
+
+def test_export_page_with_print_pdf(
+    client: FlaskClient, demo_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from news_franchise.newsletter import views
+
+    monkeypatch.setattr(views, "newsletter_pdf", lambda view, theme, settings: FAKE_PDF)
+    html = _html(post_form(client, "/newsletters/2000-01/export/email", follow_redirects=True))
+    assert "news-franchise-2000-01.pdf" in html and "Imprimer la newsletter" in html
+    pdf = client.get("/newsletters/2000-01/export/email/news-franchise-2000-01.pdf")
+    assert pdf.status_code == 200 and pdf.data == FAKE_PDF
+    assert pdf.mimetype == "application/pdf"
+    assert client.get("/newsletters/2000-01/export/email/autre.pdf").status_code == 404
+    folder = demo_settings.exports_dir / "2000-01" / "email"
+    assert (folder / "news-franchise-2000-01.pdf").read_bytes() == FAKE_PDF

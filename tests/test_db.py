@@ -27,6 +27,7 @@ LATEST = list_migrations()[-1].version
 EXPECTED_TABLES = {
     "schema_version",
     "newsletters",
+    "development_plan_links",
     "brands",
     "articles",
     "franchisees",
@@ -148,3 +149,35 @@ def test_migration_0002_keeps_step3_data(settings: Settings, tmp_path: Path) -> 
         brand = conn.execute("SELECT * FROM brands").fetchone()
         assert (brand["name"], brand["case_sensitive"]) == ("Adopt", 0)
         assert conn.execute("SELECT COUNT(*) FROM newsletters").fetchone()[0] == 1
+
+
+def test_migration_0008_moves_the_plans_link(settings: Settings, tmp_path: Path) -> None:
+    """Le lien unique des plans (colonnes de newsletters) devient le lien n° 1."""
+    step7 = tmp_path / "migrations_v7"
+    step7.mkdir()
+    for migration in sorted(MIGRATIONS_DIR.glob("000[1-7]_*.sql")):
+        shutil.copy(migration, step7)
+    assert init_db(settings, step7) == 7
+    with closing(get_connection(settings)) as conn:
+        conn.execute(
+            "INSERT INTO newsletters (id, month, development_plans_url, development_plans_label,"
+            " created_at, updated_at) VALUES (1, '2026-09', 'https://drive.example/plans',"
+            " 'Plans 2027', 'x', 'x'), (2, '2026-10', NULL, NULL, 'x', 'x')"
+        )
+
+    assert init_db(settings) == LATEST
+
+    with closing(get_connection(settings)) as conn:
+        rows = conn.execute(
+            "SELECT newsletter_id, position, label, url FROM development_plan_links"
+        ).fetchall()
+        assert [tuple(row) for row in rows] == [(1, 1, "Plans 2027", "https://drive.example/plans")]
+        old = conn.execute(
+            "SELECT development_plans_url, development_plans_label FROM newsletters WHERE id = 1"
+        ).fetchone()
+        assert tuple(old) == (None, None)
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO development_plan_links (newsletter_id, position, url)"
+                " VALUES (2, 7, 'https://drive.example/x')"
+            )

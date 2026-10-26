@@ -21,7 +21,7 @@ from news_franchise.collect.text import html_to_text
 from news_franchise.collect.urls import clean_url, url_key
 from news_franchise.http_client import Fetcher
 from news_franchise.models import Article, Brand, Franchisee, validate_url
-from news_franchise.repositories import articles, franchisees, newsletters
+from news_franchise.repositories import articles, franchisees, newsletters, plan_links
 from news_franchise.repositories._common import utcnow
 from news_franchise.review.limits import Limits
 
@@ -159,8 +159,7 @@ def review_warnings(conn: sqlite3.Connection, newsletter_id: int, limits: Limits
     ).fetchone()[0]
     if meeting_count == 0:
         warnings.append("Aucune enseigne rencontrée saisie : la rubrique 4 sera vide.")
-    newsletter = newsletters.get_by_id(conn, newsletter_id)
-    if newsletter is not None and not newsletter.development_plans_url:
+    if plan_links.count(conn, newsletter_id) == 0:
         warnings.append("Pas de lien vers les plans de développement : la rubrique 6 sera vide.")
     if warnings:
         warnings.append(f"Rappel : la version imprimée doit tenir en {limits.pages_max} pages A4.")

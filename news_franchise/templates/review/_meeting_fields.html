@@ -12,10 +12,11 @@
            {{ invalid(edit, item_id, 'date', p ~ '-date-err') }}>
     {{ error(edit, item_id, "date", p ~ "-date-err") }}
   </div>
-  <div class="field">
-    <label for="{{ p }}-commentaire">Commentaire (facultatif)</label>
-    <input type="text" id="{{ p }}-commentaire" name="commentaire" maxlength="200"
-           value="{{ val(edit, item_id, 'commentaire', m.comment if m else '') }}" {{ invalid(edit, item_id, 'commentaire', p ~ '-commentaire-err') }}>
+  <div class="field field-wide">
+    <label for="{{ p }}-commentaire">Résumé du rendez-vous (facultatif)</label>
+    <textarea id="{{ p }}-commentaire" name="commentaire" rows="5" maxlength="1000"
+              {{ invalid(edit, item_id, 'commentaire', p ~ '-commentaire-err') }}>{{ val(edit, item_id, 'commentaire', m.comment if m else '') }}</textarea>
+    <p class="help">Quelques phrases pour les équipes : objet du rendez-vous, projets de l'enseigne, suites prévues (1 000 caractères au plus). Les retours à la ligne sont conservés.</p>
     {{ error(edit, item_id, "commentaire", p ~ "-commentaire-err") }}
   </div>
 </div>

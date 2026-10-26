@@ -79,22 +79,33 @@ def test_list_all_most_recent_first(conn: sqlite3.Connection) -> None:
     assert newsletters.get(conn, "2026-01") is None
 
 
-def test_status_and_plans_url(conn: sqlite3.Connection, newsletter: Newsletter) -> None:
+def test_status_and_plan_links(conn: sqlite3.Connection, newsletter: Newsletter) -> None:
+    from news_franchise.models import PlanLink
+    from news_franchise.repositories import plan_links
+
     assert newsletter.id is not None
     updated = newsletters.set_status(conn, newsletter.id, "reviewed")
     assert updated.status == "reviewed"
     with pytest.raises(ValueError):
         newsletters.set_status(conn, newsletter.id, "envoyée")
     url = "https://drive.google.com/plans-developpement"
-    assert (
-        newsletters.set_development_plans_url(conn, newsletter.id, url).development_plans_url == url
+    saved = plan_links.replace_all(
+        conn, newsletter.id, [PlanLink(newsletter_id=newsletter.id, position=2, url=url)]
     )
+    assert [(link.position, link.url, link.label) for link in saved] == [(2, url, None)]
+    assert plan_links.count(conn, newsletter.id) == 1
     with pytest.raises(ValueError):
-        newsletters.set_development_plans_url(conn, newsletter.id, "drive/plans")
-    assert (
-        newsletters.set_development_plans_url(conn, newsletter.id, None).development_plans_url
-        is None
-    )
+        PlanLink(newsletter_id=newsletter.id, position=1, url="drive/plans")
+    with pytest.raises(ValueError):
+        PlanLink(newsletter_id=newsletter.id, position=7, url=url)
+    with pytest.raises(sqlite3.IntegrityError):  # deux liens à la même place
+        plan_links.replace_all(
+            conn,
+            newsletter.id,
+            [PlanLink(newsletter_id=newsletter.id, position=1, url=url)] * 2,
+        )
+    assert plan_links.count(conn, newsletter.id) == 1  # transaction annulée
+    assert plan_links.replace_all(conn, newsletter.id, []) == []
 
 
 # --------------------------------------------------------------------------- articles

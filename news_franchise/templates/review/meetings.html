@@ -41,9 +41,10 @@
       <div class="card-line">
         <span class="card-pos" title="Rang">{{ positions[m.id] + 1 }}</span>
         <h2 class="card-title">{{ m.brand_name }}</h2>
-        <span class="line-meta">{% if m.meeting_date %}{{ m.meeting_date.strftime("%d/%m/%Y") }}{% endif %}{% if m.comment %} · {{ m.comment }}{% endif %}</span>
+        <span class="line-meta">{% if m.meeting_date %}{{ m.meeting_date.strftime("%d/%m/%Y") }}{% endif %}</span>
         <span class="badge badge-unsaved" {% if not editing %}hidden{% endif %}>Modifications non enregistrées</span>
       </div>
+      {% if m.comment %}<p class="meeting-summary">{{ m.comment }}</p>{% endif %}
       <div class="card-actions">
         {% with action=url_for('content.move_meeting', month=newsletter.month, meeting_id=m.id), position=positions[m.id], label="l'enseigne", rank_id=p ~ "-rang", filtre="tous" %}
           {% include "review/_move.html" %}

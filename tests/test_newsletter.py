@@ -538,3 +538,23 @@ def test_print_buttons(demo_client: FlaskClient) -> None:
     # La barre d'aperçu (et son bouton) n'apparaît pas sur la feuille imprimée.
     css = demo_client.get("/static/newsletter.css").get_data(as_text=True)
     assert re.search(r"@media print \{.*\.preview-bar \{ display: none; \}", css, re.DOTALL)
+
+
+def test_meeting_rows_put_summaries_on_their_own_row() -> None:
+    from news_franchise.newsletter.view import MeetingItem, meeting_rows
+
+    short = [MeetingItem(f"Enseigne {n}", None, None) for n in range(3)]
+    long = MeetingItem("Leonidas", "8 janvier 2000", "Rendez-vous.\nSuite prévue.")
+    assert long.wide and long.comment_lines == ("Rendez-vous.", "Suite prévue.")
+    rows = meeting_rows((short[0], long, short[1], short[2]))
+    assert [[item.brand for item in row] for row in rows] == [
+        ["Enseigne 0"],
+        ["Leonidas"],
+        ["Enseigne 1", "Enseigne 2"],
+    ]
+
+
+def test_meeting_summary_in_preview_keeps_line_breaks(demo_client: FlaskClient) -> None:
+    html = _html(demo_client.get("/newsletters/2000-01/apercu"))
+    assert "nl-meeting-wide" in html
+    assert "responsable du développement.<br>L&#39;enseigne cherche" in html

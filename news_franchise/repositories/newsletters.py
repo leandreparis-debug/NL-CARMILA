@@ -11,7 +11,6 @@ from news_franchise.models import (
     FrontPageFigures,
     Newsletter,
     validate_month,
-    validate_url,
 )
 from news_franchise.repositories import openings
 from news_franchise.repositories._common import (
@@ -20,9 +19,9 @@ from news_franchise.repositories._common import (
     utcnow,
 )
 
-_COLUMNS = (
-    "id, month, status, development_plans_url, development_plans_label, created_at, updated_at"
-)
+# development_plans_url / development_plans_label : colonnes abandonnées (migration 0008,
+# liens des plans dans development_plan_links).
+_COLUMNS = "id, month, status, created_at, updated_at"
 
 
 def _from_row(row: sqlite3.Row) -> Newsletter:
@@ -31,8 +30,6 @@ def _from_row(row: sqlite3.Row) -> Newsletter:
         id=row["id"],
         month=row["month"],
         status=row["status"],
-        development_plans_url=row["development_plans_url"],
-        development_plans_label=row["development_plans_label"],
         created_at=from_iso_datetime(row["created_at"]),
         updated_at=from_iso_datetime(row["updated_at"]),
     )
@@ -78,7 +75,7 @@ def _touch_update(
     conn: sqlite3.Connection, newsletter_id: int, column: str, value: object
 ) -> Newsletter:
     """Met à jour une colonne (nom fixé dans le code) et updated_at ; renvoie la newsletter."""
-    assert column in ("status", "development_plans_url", "development_plans_label")
+    assert column == "status"
     cursor = conn.execute(
         f"UPDATE newsletters SET {column} = ?, updated_at = ? WHERE id = ?",
         (value, to_iso_datetime(utcnow()), newsletter_id),
@@ -98,31 +95,6 @@ def set_status(conn: sqlite3.Connection, newsletter_id: int, status: str) -> New
             f"(attendu : {', '.join(NEWSLETTER_STATUSES)})."
         )
     return _touch_update(conn, newsletter_id, "status", status)
-
-
-def set_development_plans_url(
-    conn: sqlite3.Connection, newsletter_id: int, url: str | None
-) -> Newsletter:
-    """Enregistre (ou efface avec None / « ») le lien vers les plans de développement."""
-    value = validate_url(url, "development_plans_url") if url and url.strip() else None
-    return _touch_update(conn, newsletter_id, "development_plans_url", value)
-
-
-def set_development_plans(
-    conn: sqlite3.Connection, newsletter_id: int, url: str | None, label: str | None
-) -> Newsletter:
-    """Enregistre le lien des plans de développement et son libellé (None = défaut).
-
-    Seul le format est vérifié (http/https) : le lien, souvent interne (SharePoint,
-    Google Drive), n'est jamais appelé. url None ou vide retire le lien et le libellé.
-    """
-    if not url or not url.strip():
-        set_development_plans_url(conn, newsletter_id, None)
-        return _touch_update(conn, newsletter_id, "development_plans_label", None)
-    if label is not None and len(label) > 100:
-        raise ValueError("Le libellé du lien est trop long (100 caractères au plus).")
-    set_development_plans_url(conn, newsletter_id, url)
-    return _touch_update(conn, newsletter_id, "development_plans_label", label or None)
 
 
 def delete(conn: sqlite3.Connection, newsletter_id: int, photos_dir: Path | None = None) -> None:

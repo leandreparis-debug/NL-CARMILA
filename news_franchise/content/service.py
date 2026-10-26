@@ -14,8 +14,16 @@ from pathlib import Path
 
 from news_franchise.collect.text import fold
 from news_franchise.content.photos import PhotoError, SavedPhoto, process_photo
-from news_franchise.models import Brand, Meeting, Newsletter, Opening, OpeningPhoto
-from news_franchise.repositories import franchisees, meetings, newsletters, openings
+from news_franchise.models import (
+    MAX_PLAN_LINKS,
+    Brand,
+    Meeting,
+    Newsletter,
+    Opening,
+    OpeningPhoto,
+    PlanLink,
+)
+from news_franchise.repositories import franchisees, meetings, newsletters, openings, plan_links
 from news_franchise.review.service import (
     OTHER_BRAND,
     FormError,
@@ -29,7 +37,8 @@ MAX_LOCATION = 150
 MAX_DESCRIPTION = 400
 MAX_CAPTION = 200
 MAX_MEETING_BRAND = 100
-MAX_COMMENT = 200
+# Résumé du rendez-vous avec l'enseigne : quelques phrases, retours à la ligne permis.
+MAX_COMMENT = 1000
 MAX_PLANS_LABEL = 100
 MAX_QUICK_LINES = 100
 
@@ -175,6 +184,23 @@ def update_caption(conn: sqlite3.Connection, photo: OpeningPhoto, form: Mapping[
 # --------------------------------------------------------------------------- enseignes rencontrées
 
 
+def multiline_field(form: Mapping[str, str], name: str, label: str, max_length: int) -> str | None:
+    """Texte facultatif sur plusieurs lignes : espaces superflus retirés ligne par ligne,
+    au plus une ligne vide entre deux paragraphes ; None si vide."""
+    raw = (form.get(name) or "").replace("\r\n", "\n").replace("\r", "\n")
+    lines = [" ".join(line.split()) for line in raw.split("\n")]
+    paragraphs: list[str] = []
+    for line in lines:
+        if line or (paragraphs and paragraphs[-1]):
+            paragraphs.append(line)
+    value = "\n".join(paragraphs).strip()
+    if len(value) > max_length:
+        raise FormError(
+            f"« {label} » est trop long ({len(value)} caractères, {max_length} au plus).", name
+        )
+    return value or None
+
+
 def meeting_from_form(
     form: Mapping[str, str], newsletter_id: int, base: Meeting | None = None
 ) -> Meeting:
@@ -183,7 +209,7 @@ def meeting_from_form(
         "brand_name": text_field(form, "enseigne", "Enseigne", MAX_MEETING_BRAND, required=True)
         or "",
         "meeting_date": date_field(form, "date", "Date"),
-        "comment": text_field(form, "commentaire", "Commentaire", MAX_COMMENT),
+        "comment": multiline_field(form, "commentaire", "Résumé du rendez-vous", MAX_COMMENT),
     }
     return replace(base, **values) if base else Meeting(newsletter_id=newsletter_id, **values)
 
@@ -248,21 +274,42 @@ def quick_add_meetings(conn: sqlite3.Connection, newsletter_id: int, text: str) 
 # --------------------------------------------------------------------------- plans
 
 
-def save_plans_link(
+def plan_links_from_form(form: Mapping[str, str], newsletter: Newsletter) -> list[PlanLink]:
+    """Liens des plans d'après le formulaire : 6 emplacements (lien_1 / libelle_1 …).
+
+    Un emplacement sans lien ni libellé est ignoré ; un libellé sans lien est une erreur.
+    Seul le format est vérifié (http/https) : les liens, souvent internes (SharePoint,
+    Google Drive), ne sont jamais appelés. Lève FormError (champ fautif nommé).
+    """
+    assert newsletter.id is not None
+    links: list[PlanLink] = []
+    for position in range(1, MAX_PLAN_LINKS + 1):
+        url_name, label_name = f"lien_{position}", f"libelle_{position}"
+        label = text_field(form, label_name, f"Libellé du lien {position}", MAX_PLANS_LABEL)
+        if not (form.get(url_name) or "").strip():
+            if label:
+                raise FormError(
+                    f"Lien {position} : indiquez l'adresse du document, ou effacez le libellé.",
+                    url_name,
+                )
+            continue
+        url = url_field(form, url_name, f"Lien {position}")
+        links.append(PlanLink(newsletter_id=newsletter.id, position=position, url=url, label=label))
+    return links
+
+
+def save_plan_links(
     conn: sqlite3.Connection, newsletter: Newsletter, form: Mapping[str, str]
-) -> None:
-    """Enregistre le lien des plans de développement (format http/https vérifié, le lien
-    n'est jamais appelé : il est souvent interne et demande une connexion)."""
+) -> list[PlanLink]:
+    """Enregistre les liens des plans de développement (jusqu'à 6, un par région)."""
     assert newsletter.id is not None
-    url = url_field(form, "lien", "Lien vers les plans de développement")
-    label = text_field(form, "libelle", "Libellé du lien", MAX_PLANS_LABEL)
-    newsletters.set_development_plans(conn, newsletter.id, url, label)
+    return plan_links.replace_all(conn, newsletter.id, plan_links_from_form(form, newsletter))
 
 
-def clear_plans_link(conn: sqlite3.Connection, newsletter: Newsletter) -> None:
-    """Retire le lien des plans de développement (et son libellé)."""
+def clear_plan_links(conn: sqlite3.Connection, newsletter: Newsletter) -> None:
+    """Retire tous les liens des plans de développement."""
     assert newsletter.id is not None
-    newsletters.set_development_plans(conn, newsletter.id, None, None)
+    plan_links.replace_all(conn, newsletter.id, [])
 
 
 def last_draft(conn: sqlite3.Connection) -> Newsletter | None:

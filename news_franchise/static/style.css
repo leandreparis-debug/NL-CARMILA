@@ -560,3 +560,31 @@ table.figures td { text-align: right; font-family: var(--font-label); font-weigh
 }
 .export-box h2 { margin-top: 0; }
 .email-frame { width: 100%; height: 720px; border: 0; border-radius: 10px; background: var(--white); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* Résumé d'un rendez-vous avec une enseigne (retours à la ligne conservés). */
+.meeting-summary {
+  margin: 0.5rem 0 0.2rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--green);
+  border-radius: 0 8px 8px 0;
+  background: var(--cream);
+  white-space: pre-line;
+  font-size: 0.93rem;
+}
+
+/* Rubrique 6 : liens des plans (jusqu'à 6). */
+.plans-list { margin: 0.5rem 0 0.8rem; padding-left: 1.4rem; }
+.plans-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; padding: 0.35rem 0; }
+.plans-label { font-weight: 700; color: var(--green); }
+.plans-list .url { color: var(--muted); font-size: 0.85rem; flex: 1 1 260px; }
+.plans-slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 0.6rem 1rem;
+  margin: 0 0 0.8rem;
+  padding: 0.8rem 1rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.plans-slot legend { padding: 0 0.4rem; font-family: var(--font-label); font-weight: 700; color: var(--green); }
+@media (max-width: 900px) { .plans-slot { grid-template-columns: 1fr; } }

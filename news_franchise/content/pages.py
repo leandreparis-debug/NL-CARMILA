@@ -6,8 +6,8 @@ import sqlite3
 from typing import Any
 
 from news_franchise.content import service
-from news_franchise.models import DEFAULT_PLANS_LABEL, Newsletter
-from news_franchise.repositories import brands, meetings, openings
+from news_franchise.models import DEFAULT_PLANS_LABEL, MAX_PLAN_LINKS, Newsletter
+from news_franchise.repositories import brands, meetings, openings, plan_links
 from news_franchise.review.limits import Limits
 
 CONTENT_TABS = ("une", "ouvertures", "rencontres", "plans")
@@ -49,4 +49,11 @@ def tab_context(
             "brand_list": brands.list_all(conn, tracked_only=True),
             "date_value": service.opening_date_value,
         }
-    return {"default_plans_label": DEFAULT_PLANS_LABEL}
+    links = {link.position: link for link in plan_links.list_for_newsletter(conn, newsletter.id)}
+    return {
+        "default_plans_label": DEFAULT_PLANS_LABEL,
+        "plan_slots": [
+            (position, links.get(position)) for position in range(1, MAX_PLAN_LINKS + 1)
+        ],
+        "plan_links": list(links.values()),
+    }

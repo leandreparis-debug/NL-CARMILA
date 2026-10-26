@@ -21,6 +21,8 @@ RUBRIC_BRAND_NEWS = 2
 ARTICLE_RUBRICS = (RUBRIC_NEW_FRANCHISES, RUBRIC_BRAND_NEWS)
 RUN_STATUSES = ("running", "success", "partial", "failed")
 DEFAULT_PLANS_LABEL = "Voir les plans de développement"
+MAX_PLAN_LINKS = 6  # rubrique 6 : un lien par région
+PLAN_LABEL_MAX_LENGTH = 100
 RUN_FINAL_STATUSES = ("success", "partial", "failed")
 BODY_TEXT_MAX_LENGTH = 20_000
 EVIDENCE_MAX_LENGTH = 400
@@ -113,24 +115,50 @@ class Newsletter:
 
     month: str
     status: str = "draft"
-    development_plans_url: str | None = None
-    development_plans_label: str | None = None  # None = « Voir les plans de développement »
     created_at: datetime | None = None
     updated_at: datetime | None = None
     id: int | None = None
 
     def __post_init__(self) -> None:
-        """Valide le mois, le statut et le lien des plans de développement."""
+        """Valide le mois et le statut."""
         self.month = validate_month(self.month)
         if self.status not in NEWSLETTER_STATUSES:
             raise ValueError(
                 f"Statut de newsletter invalide : {self.status!r} "
                 f"(attendu : {', '.join(NEWSLETTER_STATUSES)})."
             )
-        if self.development_plans_url is not None:
-            self.development_plans_url = validate_url(
-                self.development_plans_url, "development_plans_url"
+
+
+@dataclass
+class PlanLink:
+    """Lien vers des plans de développement (rubrique 6), par exemple ceux d'une région.
+
+    position va de 1 à 6 ; label None = « Voir les plans de développement ». Seul le format
+    de l'URL est vérifié (http/https) : le lien, souvent interne, n'est jamais appelé.
+    """
+
+    newsletter_id: int
+    position: int
+    url: str
+    label: str | None = None
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        """Valide la position, l'URL et la longueur du libellé."""
+        if not isinstance(self.position, int) or not 1 <= self.position <= MAX_PLAN_LINKS:
+            raise ValueError(
+                f"Position de lien invalide : {self.position!r} (1 à {MAX_PLAN_LINKS})."
             )
+        self.url = validate_url(self.url, "lien des plans")
+        if self.label is not None:
+            self.label = self.label.strip() or None
+        if self.label is not None and len(self.label) > PLAN_LABEL_MAX_LENGTH:
+            raise ValueError(f"Libellé trop long ({PLAN_LABEL_MAX_LENGTH} caractères au plus).")
+
+    @property
+    def display_label(self) -> str:
+        """Libellé affiché (libellé par défaut si vide)."""
+        return self.label or DEFAULT_PLANS_LABEL
 
 
 @dataclass

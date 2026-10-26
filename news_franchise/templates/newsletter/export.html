@@ -28,6 +28,10 @@
         <dd>{{ info.html_size_label }} <span class="muted">(Gmail tronque au-delà de {{ clip_limit }})</span>
           {% if info.clipped_risk %}<span class="badge badge-opp">Trop près de la limite</span>{% else %}<span class="badge badge-on">OK</span>{% endif %}</dd>
         <dt>Images jointes</dt><dd>{{ info.images_count }} ({{ info.images_size_label }})</dd>
+        <dt>Version à imprimer</dt>
+        <dd>{% if info.pdf %}<a href="{{ url_for('newsletter.export_email_pdf', month=newsletter.month, name='news-franchise-' ~ newsletter.month) }}" target="_blank" rel="noopener">{{ info.pdf.name }}</a>
+          <span class="muted">— ouverte par le bouton « Imprimer la newsletter » de l'e-mail</span>
+          {% else %}<span class="muted">aucune : l'e-mail n'a pas de bouton « Imprimer » (voir le message plus haut)</span>{% endif %}</dd>
         <dt>Dossier</dt><dd><code>{{ info.package.parent }}</code></dd>
         <dt>Paquet pour Gmail</dt>
         <dd><code>{{ info.package.name }}</code> —
@@ -48,7 +52,9 @@
             NF_DRIVE_DIR (fichier .env) et la copie sera automatique.</span></li>
         {% endif %}
         <li>Ouvrez votre projet Apps Script « News Franchise » (script.google.com) et lancez
-          la fonction <code>creerBrouillon</code>.</li>
+          la fonction <code>creerBrouillon</code>.{% if info.pdf %} Le script dépose aussi le PDF
+          à imprimer dans le dossier Drive, le partage en lecture et le relie au bouton
+          « Imprimer la newsletter ».{% endif %}</li>
         <li>Dans Gmail, ouvrez le dossier <strong>Brouillons</strong> : ajoutez les destinataires,
           relisez, puis envoyez.</li>
       </ol>

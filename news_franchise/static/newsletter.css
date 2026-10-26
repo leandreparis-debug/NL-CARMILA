@@ -258,7 +258,8 @@ body.nl-page {
   break-inside: avoid;
 }
 .nl-meeting strong { color: var(--nf-secondary); font-size: 16px; }
-.nl-comment { font-size: 14px; }
+.nl-comment { font-size: 14px; margin-top: 4px; }
+.nl-meeting-wide { grid-column: 1 / -1; }
 
 .nl-franchisees { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .nl-franchisee {
@@ -272,6 +273,9 @@ body.nl-page {
 .nl-source { font-size: 13px; color: var(--nf-muted); }
 
 .nl-plans { padding: 18px 20px; background: var(--nf-surface); border-radius: 14px; }
+.nl-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.nl-plans-item { break-inside: avoid; }
+.nl-plans-item .nl-url { margin: 4px 0 0 !important; }
 .nl-button {
   display: inline-block;
   padding: 10px 18px;

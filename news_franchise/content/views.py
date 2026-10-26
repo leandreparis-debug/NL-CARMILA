@@ -355,22 +355,28 @@ def delete_meeting(month: str, meeting_id: int) -> ResponseReturnValue:
 
 @bp.post("/newsletters/<month>/plans/enregistrer")
 def save_plans(month: str) -> ResponseReturnValue:
-    """Enregistre le lien des plans de développement (format vérifié, lien jamais appelé)."""
+    """Enregistre les liens des plans de développement (format vérifié, liens jamais appelés)."""
     newsletter = _newsletter(month)
     try:
-        service.save_plans_link(get_db(), newsletter, request.form)
+        saved = service.save_plan_links(get_db(), newsletter, request.form)
     except FormError as exc:
         return _refused(newsletter, "plans", NEW_ITEM, exc)
     flash(
-        "Lien des plans de développement enregistré. Testez-le avec « Ouvrir le lien ».", "success"
+        (
+            f"{len(saved)} lien(s) des plans de développement enregistré(s). "
+            "Testez-les avec « Ouvrir »."
+            if saved
+            else "Aucun lien saisi : la rubrique 6 sera vide."
+        ),
+        "success",
     )
     return _back(month, "plans")
 
 
 @bp.post("/newsletters/<month>/plans/retirer")
 def clear_plans(month: str) -> ResponseReturnValue:
-    """Retire le lien des plans de développement."""
+    """Retire tous les liens des plans de développement."""
     newsletter = _newsletter(month)
-    service.clear_plans_link(get_db(), newsletter)
-    flash("Lien des plans de développement retiré.", "success")
+    service.clear_plan_links(get_db(), newsletter)
+    flash("Liens des plans de développement retirés.", "success")
     return _back(month, "plans")

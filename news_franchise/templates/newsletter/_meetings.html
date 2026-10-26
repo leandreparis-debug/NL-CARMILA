@@ -1,30 +1,31 @@
-{# Enseignes rencontrées (rubrique 4) : cartes compactes sur deux colonnes. #}
+{# Enseignes rencontrées (rubrique 4) : cartes compactes sur deux colonnes ; une rencontre
+   accompagnée d'un résumé prend toute la largeur (rangées préparées en Python). #}
 {% if medium == "email" %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-  {% for row in section.items|batch(2) %}
+  {% for row in section.meeting_rows %}
     <tr>
       {% for item in row %}
-        <td width="50%" style="padding:0 {{ '5px' if loop.first else '0' }} 10px {{ '0' if loop.first else '5px' }};vertical-align:top;">
+        <td {% if not item.wide %}width="50%"{% endif %} {% if item.wide %}colspan="2"{% endif %} style="padding:0 {{ '5px' if loop.first and not item.wide else '0' }} 10px {{ '0' if loop.first else '5px' }};vertical-align:top;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr><td style="{{ st.card_cell }}border-left:4px solid {{ accent.color }};">
               <p style="{{ st.strong }}">{{ item.brand }}</p>
               {% if item.date_label %}<p style="{{ st.meta }}">{{ item.date_label }}</p>{% endif %}
-              {% if item.comment %}<p style="{{ st.text }}">{{ item.comment }}</p>{% endif %}
+              {% if item.comment %}<p style="{{ st.text }}">{% for line in item.comment_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>{% endif %}
             </td></tr>
           </table>
         </td>
       {% endfor %}
-      {% if row|length == 1 %}<td width="50%"></td>{% endif %}
+      {% if row|length == 1 and not row[0].wide %}<td width="50%"></td>{% endif %}
     </tr>
   {% endfor %}
 </table>
 {% else %}
 <ul class="nl-meetings">
   {% for item in section.items %}
-    <li class="nl-meeting">
+    <li class="nl-meeting{% if item.wide %} nl-meeting-wide{% endif %}">
       <strong>{{ item.brand }}</strong>
       {% if item.date_label %}<span class="nl-date">{{ item.date_label }}</span>{% endif %}
-      {% if item.comment %}<span class="nl-comment">{{ item.comment }}</span>{% endif %}
+      {% if item.comment %}<span class="nl-comment">{% for line in item.comment_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</span>{% endif %}
     </li>
   {% endfor %}
 </ul>

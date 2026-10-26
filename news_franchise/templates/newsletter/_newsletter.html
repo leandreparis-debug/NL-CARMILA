@@ -22,6 +22,16 @@
     </td>
   </tr>
   <tr><td style="{{ st.tagline }}">{{ theme.tagline }}</td></tr>
+  {% if print_href %}
+    {# Un e-mail ne peut pas lancer l'impression : le bouton ouvre la version PDF. #}
+    <tr>
+      <td align="right" style="padding:16px 32px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td bgcolor="{{ theme.colors.secondary }}" style="{{ st.button_cell }}"><a href="{{ print_href }}" style="{{ st.button }}">Imprimer la newsletter (PDF)</a></td></tr>
+        </table>
+      </td>
+    </tr>
+  {% endif %}
   {% include "newsletter/_une.html" %}
   {% include "newsletter/_sommaire.html" %}
   {% for section in view.visible_sections %}
@@ -45,7 +55,7 @@
             {% endfor %}
           </table>
         {% elif section.kind == "plans" %}
-          {% for item in section.items %}{% include "newsletter/_plans.html" %}{% endfor %}
+          {% include "newsletter/_plans.html" %}
         {% endif %}
       </td>
     </tr>
@@ -84,7 +94,7 @@
           {% for item in section.items %}{% include "newsletter/_franchisee.html" %}{% endfor %}
         </div>
       {% elif section.kind == "plans" %}
-        {% for item in section.items %}{% include "newsletter/_plans.html" %}{% endfor %}
+        {% include "newsletter/_plans.html" %}
       {% endif %}
     </section>
   {% endfor %}

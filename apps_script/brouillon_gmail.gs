@@ -7,6 +7,11 @@
  * destinataire n'est ajouté : vous les choisissez dans Gmail avant l'envoi. Rien n'est
  * envoyé par ce script.
  *
+ * Si l'e-mail porte un bouton « Imprimer la newsletter », le script dépose d'abord la
+ * version PDF dans le même dossier Drive, la partage en lecture (voir PARTAGE_PDF) et met
+ * son lien dans le bouton : un e-mail ne peut pas lancer l'impression lui-même, le bouton
+ * ouvre donc le PDF, que le lecteur imprime.
+ *
  * Le brouillon est créé avec l'API Gmail (service avancé « Gmail API », à ajouter une fois
  * dans l'éditeur : Services +) : c'est ce qui garde les photos et logos visibles dans le
  * brouillon (avec GmailApp.createDraft et inlineImages, elles n'y apparaissent pas toujours).
@@ -18,7 +23,15 @@
 const DOSSIER_DRIVE = 'News Franchise';
 
 /** Format de paquet attendu (produit par l'application). */
-const FORMAT_PAQUET = 'news-franchise-email/2';
+const FORMAT_PAQUET = 'news-franchise-email/3';
+
+/**
+ * Qui peut ouvrir le PDF à imprimer (lien du bouton) :
+ *   'DOMAINE' : les personnes de votre organisation (comptes Carmila) qui ont le lien ;
+ *   'LIEN'    : toute personne qui a le lien, même hors de l'organisation ;
+ *   'AUCUN'   : personne d'autre que vous (à partager vous-même dans Drive).
+ */
+const PARTAGE_PDF = 'DOMAINE';
 
 /** Noms de paquets reconnus : news-franchise-AAAA-MM.json */
 const MOTIF_NOM = /^news-franchise-\d{4}-(0[1-9]|1[0-2])\.json$/;
@@ -33,9 +46,19 @@ function creerBrouillon() {
       'cliquez sur « Services » (+) à gauche, choisissez « Gmail API », puis « Ajouter ». ' +
       'Relancez ensuite creerBrouillon.');
   }
-  const fichier = dernierPaquet_();
+  const dossier = dossierDrive_();
+  const fichier = dernierPaquet_(dossier);
   const paquet = lirePaquet_(fichier);
-  const brouillon = Gmail.Users.Drafts.create({ message: { raw: paquet.raw } }, 'me');
+  let raw = paquet.raw;
+  let lienPdf = null;
+  if (paquet.printPdf) {
+    lienPdf = deposerPdf_(dossier, paquet.printPdf);
+    raw = remplacerLien_(raw, paquet.printLinkToken, lienPdf);
+  }
+  const brouillon = Gmail.Users.Drafts.create({ message: { raw: raw } }, 'me');
+  if (lienPdf) {
+    Logger.log('Version à imprimer déposée dans Drive : %s', lienPdf);
+  }
   Logger.log(
     'Brouillon créé : « %s » (%s images), depuis %s. Ouvrez Gmail > Brouillons, ' +
       'ajoutez les destinataires, relisez, puis envoyez.',
@@ -46,14 +69,19 @@ function creerBrouillon() {
   return brouillon.id;
 }
 
-/** Paquet le plus récent (date de modification) du dossier DOSSIER_DRIVE. */
-function dernierPaquet_() {
+/** Dossier Google Drive DOSSIER_DRIVE. */
+function dossierDrive_() {
   const dossiers = DriveApp.getFoldersByName(DOSSIER_DRIVE);
   if (!dossiers.hasNext()) {
     throw new Error('Dossier Google Drive introuvable : « ' + DOSSIER_DRIVE + ' ». ' +
       'Créez-le à la racine de Mon Drive, ou changez DOSSIER_DRIVE en haut du script.');
   }
-  const fichiers = dossiers.next().getFiles();
+  return dossiers.next();
+}
+
+/** Paquet le plus récent (date de modification) du dossier. */
+function dernierPaquet_(dossier) {
+  const fichiers = dossier.getFiles();
   let dernier = null;
   while (fichiers.hasNext()) {
     const fichier = fichiers.next();
@@ -91,4 +119,45 @@ function lirePaquet_(fichier) {
     throw new Error('Paquet incomplet : « images » manquant.');
   }
   return paquet;
+}
+
+/**
+ * Dépose le PDF à imprimer dans le dossier (remplace celui du même nom), le partage selon
+ * PARTAGE_PDF et renvoie son lien.
+ */
+function deposerPdf_(dossier, pdf) {
+  const anciens = dossier.getFilesByName(pdf.fileName);
+  while (anciens.hasNext()) {
+    anciens.next().setTrashed(true);
+  }
+  const contenu = Utilities.newBlob(Utilities.base64Decode(pdf.data), pdf.mimeType, pdf.fileName);
+  const fichier = dossier.createFile(contenu);
+  if (PARTAGE_PDF !== 'AUCUN') {
+    const acces = PARTAGE_PDF === 'LIEN'
+      ? DriveApp.Access.ANYONE_WITH_LINK
+      : DriveApp.Access.DOMAIN_WITH_LINK;
+    try {
+      fichier.setSharing(acces, DriveApp.Permission.VIEW);
+    } catch (erreur) {
+      throw new Error('Le PDF « ' + pdf.fileName + ' » est dans Drive mais n\'a pas pu être ' +
+        'partagé (' + erreur.message + '). Votre organisation limite peut-être le partage : ' +
+        'changez PARTAGE_PDF en haut du script, ou partagez le fichier vous-même, puis ' +
+        'relancez creerBrouillon.');
+    }
+  }
+  return fichier.getUrl();
+}
+
+/**
+ * Remplace le lien provisoire du bouton « Imprimer » par le lien du PDF, dans le message
+ * complet (texte et HTML sont en UTF-8 lisible ; les images, en base64, ne changent pas).
+ */
+function remplacerLien_(raw, jeton, lien) {
+  const message = Utilities.newBlob(Utilities.base64DecodeWebSafe(raw)).getDataAsString('UTF-8');
+  if (!jeton || message.indexOf(jeton) < 0) {
+    throw new Error('Paquet incohérent : lien du bouton « Imprimer » introuvable. ' +
+      'Préparez à nouveau l\'e-mail dans l\'application.');
+  }
+  const corrige = message.split(jeton).join(lien);
+  return Utilities.base64EncodeWebSafe(Utilities.newBlob(corrige).getBytes());
 }

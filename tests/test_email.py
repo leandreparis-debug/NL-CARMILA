@@ -363,8 +363,11 @@ def test_print_button_links_to_the_pdf(
     assert export.print_pdf == FAKE_PDF and export.warnings == ()
     # Bouton en haut et lien en pied de page, vers le lien provisoire (remplacé par le script).
     assert export.html.count(f'href="{token}"') == 2
-    assert "Imprimer la newsletter (PDF)" in export.html
-    assert f"Imprimer la newsletter (PDF) : {token}" in export.text
+    # Lien discret, souligné, à côté de la phrase d'accroche (et en pied de page).
+    assert "La newsletter mensuelle de Carmila Franchise — <a" in export.html
+    assert "voir la version à imprimer</a>" in export.html
+    assert "Imprimer la newsletter" not in export.html  # plus de gros bouton
+    assert f"Voir la version à imprimer (PDF) : {token}" in export.text
     # Version navigateur : le bouton ouvre le PDF voisin.
     assert export.browser_html.count('href="news-franchise-2000-01.pdf"') == 2
 
@@ -405,7 +408,8 @@ def test_no_print_button_without_pdf(
         assert result.print_pdf is None
         assert email_module.PRINT_LINK_TOKEN not in result.html + result.text
         assert json.loads(package_json(result))["printPdf"] is None
-    assert len(export.warnings) == 1 and "sans bouton « Imprimer »" in export.warnings[0]
+    assert len(export.warnings) == 1
+    assert "sans lien vers la version à imprimer" in export.warnings[0]
 
 
 def test_export_page_with_print_pdf(
@@ -415,7 +419,7 @@ def test_export_page_with_print_pdf(
 
     monkeypatch.setattr(views, "newsletter_pdf", lambda view, theme, settings: FAKE_PDF)
     html = _html(post_form(client, "/newsletters/2000-01/export/email", follow_redirects=True))
-    assert "news-franchise-2000-01.pdf" in html and "Imprimer la newsletter" in html
+    assert "news-franchise-2000-01.pdf" in html and "voir la version à imprimer" in html
     pdf = client.get("/newsletters/2000-01/export/email/news-franchise-2000-01.pdf")
     assert pdf.status_code == 200 and pdf.data == FAKE_PDF
     assert pdf.mimetype == "application/pdf"

@@ -7,9 +7,9 @@
  * destinataire n'est ajouté : vous les choisissez dans Gmail avant l'envoi. Rien n'est
  * envoyé par ce script.
  *
- * Si l'e-mail porte un bouton « Imprimer la newsletter », le script dépose d'abord la
+ * Si l'e-mail porte le lien « voir la version à imprimer », le script dépose d'abord la
  * version PDF dans le même dossier Drive, la partage en lecture (voir PARTAGE_PDF) et met
- * son lien dans le bouton : un e-mail ne peut pas lancer l'impression lui-même, le bouton
+ * son adresse dans ce lien : un e-mail ne peut pas lancer l'impression lui-même, le lien
  * ouvre donc le PDF, que le lecteur imprime.
  *
  * Le brouillon est créé avec l'API Gmail (service avancé « Gmail API », à ajouter une fois
@@ -26,7 +26,7 @@ const DOSSIER_DRIVE = 'News Franchise';
 const FORMAT_PAQUET = 'news-franchise-email/3';
 
 /**
- * Qui peut ouvrir le PDF à imprimer (lien du bouton) :
+ * Qui peut ouvrir le PDF à imprimer (lien « voir la version à imprimer ») :
  *   'DOMAINE' : les personnes de votre organisation (comptes Carmila) qui ont le lien ;
  *   'LIEN'    : toute personne qui a le lien, même hors de l'organisation ;
  *   'AUCUN'   : personne d'autre que vous (à partager vous-même dans Drive).
@@ -149,13 +149,13 @@ function deposerPdf_(dossier, pdf) {
 }
 
 /**
- * Remplace le lien provisoire du bouton « Imprimer » par le lien du PDF, dans le message
+ * Remplace l'adresse provisoire du lien « voir la version à imprimer » par celle du PDF, dans le message
  * complet (texte et HTML sont en UTF-8 lisible ; les images, en base64, ne changent pas).
  */
 function remplacerLien_(raw, jeton, lien) {
   const message = Utilities.newBlob(Utilities.base64DecodeWebSafe(raw)).getDataAsString('UTF-8');
   if (!jeton || message.indexOf(jeton) < 0) {
-    throw new Error('Paquet incohérent : lien du bouton « Imprimer » introuvable. ' +
+    throw new Error('Paquet incohérent : lien « voir la version à imprimer » introuvable. ' +
       'Préparez à nouveau l\'e-mail dans l\'application.');
   }
   const corrige = message.split(jeton).join(lien);

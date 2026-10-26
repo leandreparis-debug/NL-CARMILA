@@ -336,11 +336,12 @@ script `apps_script/brouillon_gmail.gs`, qui crée un **brouillon Gmail** : il n
 ajouter les destinataires et envoyer. Rien n'est envoyé automatiquement, et l'application
 ne stocke aucun identifiant Google.
 
-L'e-mail porte un bouton **« Imprimer la newsletter (PDF) »** : un e-mail ne peut pas lancer
-l'impression lui-même, le bouton ouvre donc la version PDF, que le lecteur imprime.
+L'e-mail porte un lien souligné **« voir la version à imprimer »**, à côté de la phrase
+d'accroche (et en pied de page) : un e-mail ne peut pas lancer l'impression lui-même, le
+lien ouvre donc la version PDF, que le lecteur imprime.
 L'application fabrique ce PDF avec le navigateur du poste (Edge, installé avec Windows, ou
 Chrome ; `NF_BROWSER` pour en indiquer un autre) ; le script le dépose dans le dossier Drive,
-le partage en lecture aux personnes de l'organisation qui ont le lien, et le relie au bouton.
+le partage en lecture aux personnes de l'organisation qui ont le lien, et le relie au lien.
 
 La page d'export affiche la taille du HTML (Gmail tronque au-delà de 102 Ko : un
 avertissement s'affiche avant), les images jointes et l'e-mail tel qu'il sera reçu.

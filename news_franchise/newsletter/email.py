@@ -48,7 +48,7 @@ EMAIL_WIDTH = 600
 GMAIL_CLIP_BYTES = 102 * 1024  # au-delà, Gmail tronque le message (« Message tronqué »)
 GMAIL_CLIP_MARGIN = 92 * 1024  # avertissement avant la limite
 PACKAGE_FORMAT = "news-franchise-email/3"
-# Adresse provisoire du bouton « Imprimer la newsletter » : le script Apps Script la
+# Adresse provisoire du lien « voir la version à imprimer » : le script Apps Script la
 # remplace par le lien du PDF déposé dans Google Drive, avant de créer le brouillon.
 PRINT_LINK_TOKEN = "NF-LIEN-PDF-A-REMPLACER"
 MAX_LINE_BYTES = 900  # norme des e-mails : 998 octets au plus par ligne
@@ -79,7 +79,7 @@ class EmailExport:
     text: str
     images: tuple[EmailImage, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
-    print_pdf: bytes | None = None  # version à imprimer (bouton « Imprimer » de l'e-mail)
+    print_pdf: bytes | None = None  # PDF ouvert par le lien « voir la version à imprimer »
 
     @property
     def print_pdf_name(self) -> str:
@@ -282,7 +282,7 @@ def _text_version(view: NewsletterView, theme: Theme, print_href: str | None = N
     """Version texte de l'e-mail (lecteurs sans HTML, aperçus de notification)."""
     lines = [f"{theme.name.upper()} — {view.month_label}", theme.tagline, ""]
     if print_href:
-        lines += [f"Imprimer la newsletter (PDF) : {print_href}", ""]
+        lines += [f"Voir la version à imprimer (PDF) : {print_href}", ""]
     lines.append(view.front_title.upper())
     lines.append(" · ".join(f"{f.value} {f.label}" for f in view.front))
     for section in view.visible_sections:
@@ -326,10 +326,11 @@ def build_email(
     """Prépare l'e-mail du mois AAAA-MM (doit être appelé dans un contexte Flask, pour les
     gabarits). Seuls les éléments retenus et validés y figurent, comme dans l'aperçu.
 
-    make_print_pdf fabrique la version PDF à imprimer : l'e-mail porte alors un bouton
-    « Imprimer la newsletter » (lien provisoire PRINT_LINK_TOKEN, remplacé par le script
+    make_print_pdf fabrique la version PDF à imprimer : l'e-mail porte alors un lien
+    « voir la version à imprimer », sous le bandeau et en pied de page (lien provisoire
+    PRINT_LINK_TOKEN, remplacé par le script
     Apps Script par le lien du PDF dans Google Drive). Si la fabrication échoue (PdfError),
-    l'e-mail est préparé sans ce bouton, avec un avertissement.
+    l'e-mail est préparé sans ce lien, avec un avertissement.
 
     Lève NewsletterNotFoundError, EmptyNewsletterError ou ThemeError (messages en français).
     """
@@ -341,7 +342,7 @@ def build_email(
         try:
             print_pdf = make_print_pdf(view, theme)
         except PdfError as exc:
-            warnings.append(f"E-mail préparé sans bouton « Imprimer » : {exc}")
+            warnings.append(f"E-mail préparé sans lien vers la version à imprimer : {exc}")
     images = _Images()
     accents = {key: theme.accent(key) for key in SECTION_KEYS}
 
@@ -480,8 +481,8 @@ def mime_message(export: EmailExport) -> bytes:
 
 def package_json(export: EmailExport, created_at: datetime | None = None) -> str:
     """Paquet lu par le script Apps Script : message MIME complet (« raw », base64 URL,
-    comme l'attend l'API Gmail), PDF à imprimer et lien provisoire à remplacer (s'il y a un
-    bouton « Imprimer »), et pour information l'objet, le HTML, le texte et les images."""
+    comme l'attend l'API Gmail), PDF à imprimer et adresse provisoire de son lien (s'il y en
+    a un), et pour information l'objet, le HTML, le texte et les images."""
     created_at = created_at or datetime.now(UTC)
     payload = {
         "format": PACKAGE_FORMAT,
@@ -529,7 +530,8 @@ def write_email_export(export: EmailExport, settings: Settings) -> ExportFiles:
 
     - news-franchise-AAAA-MM.html et images/ : l'e-mail à ouvrir dans un navigateur ;
     - news-franchise-AAAA-MM.eml : le message complet (s'ouvre avec Outlook ou Thunderbird ;
-      le bouton « Imprimer » n'y a pas encore son lien, posé par le script Apps Script) ;
+      le lien « voir la version à imprimer » n'y a pas encore son adresse, posée par le
+      script Apps Script) ;
     - news-franchise-AAAA-MM.pdf : la version à imprimer, s'il y en a une ;
     - news-franchise-AAAA-MM.json : le paquet pour le script Apps Script, copié aussi dans
       le dossier Google Drive (NF_DRIVE_DIR) s'il est configuré.

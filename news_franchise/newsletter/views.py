@@ -214,7 +214,7 @@ class EmailExportInfo:
     images_size: int
     package: Path
     html: Path
-    pdf: Path | None  # version à imprimer (bouton « Imprimer » de l'e-mail), s'il y en a une
+    pdf: Path | None  # version à imprimer, ouverte par le lien de l'e-mail (s'il y en a une)
 
     @property
     def html_size_label(self) -> str:
@@ -367,7 +367,7 @@ def export_email_image(month: str, name: str) -> ResponseReturnValue:
 
 @bp.get("/newsletters/<month>/export/email/<name>.pdf")
 def export_email_pdf(month: str, name: str) -> ResponseReturnValue:
-    """Version PDF à imprimer (celle que le bouton « Imprimer » de l'e-mail ouvrira)."""
+    """Version PDF à imprimer (ouverte par le lien « voir la version à imprimer »)."""
     newsletter = _month_or_404(month)
     if name != f"news-franchise-{newsletter.month}":
         abort(404)

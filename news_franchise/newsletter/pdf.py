@@ -1,4 +1,4 @@
-"""Version PDF de la newsletter, à imprimer (bouton « Imprimer » de l'e-mail).
+"""Version PDF de la newsletter, à imprimer (lien « voir la version à imprimer » de l'e-mail).
 
 Le PDF est la mise en page « impression » de l'aperçu (QR codes sous les articles, A4). Il
 est fabriqué par le navigateur du poste, sans nouvelle dépendance : Edge (installé avec
@@ -159,7 +159,7 @@ def make_pdf(html: str, browser: Path, work_dir: Path) -> bytes:
 
 def newsletter_pdf(view: NewsletterView, theme: Theme, settings: Settings) -> bytes:
     """PDF à imprimer de la newsletter. Lève PdfError si aucun navigateur n'est trouvé ou si
-    la fabrication échoue (l'e-mail est alors préparé sans bouton « Imprimer »)."""
+    la fabrication échoue (l'e-mail est alors préparé sans lien vers la version à imprimer)."""
     browser = find_browser(settings)
     if browser is None:
         raise PdfError(

@@ -21,16 +21,16 @@ dans votre compte Google, avec vos droits.
   dizaines de Ko chacune.
 - Un lien « Lire l'article → » sous chaque article (pas de QR code dans l'e-mail : on
   clique). Une version texte accompagne le HTML (lecteurs sans HTML, notifications).
-- Un bouton **« Imprimer la newsletter (PDF) »** en haut, et un lien « Version à imprimer
-  (PDF) » en pied de page (voir plus bas).
+- Un lien souligné **« voir la version à imprimer »** à côté de la phrase d'accroche, et
+  « Version à imprimer (PDF) » en pied de page (voir plus bas).
 - Gmail **tronque** les messages dont le HTML dépasse 102 Ko (« [Message tronqué] ») ; la
   taille est affichée après chaque préparation, avec un avertissement au-delà de 92 Ko.
   Pour l'ordre de grandeur : le mois de démonstration (13 articles) fait environ 46 Ko.
 
-## Le bouton « Imprimer la newsletter »
+## Le lien « voir la version à imprimer »
 
 Un e-mail ne peut pas lancer l'impression : Gmail et Outlook n'exécutent aucun programme
-dans un message. Le bouton ouvre donc la **version PDF** de la newsletter (la mise en page
+dans un message. Le lien ouvre donc la **version PDF** de la newsletter (la mise en page
 imprimable de l'aperçu, en A4, avec les QR codes), que le lecteur imprime d'un clic.
 
 1. **Préparer l'e-mail** fabrique aussi ce PDF, avec le navigateur du poste : Edge (installé
@@ -38,13 +38,13 @@ imprimable de l'aperçu, en A4, avec les QR codes), que le lecteur imprime d'un 
    `.env` permet d'en indiquer un autre. Comptez quelques secondes.
 2. Le PDF voyage dans le paquet. Le script `creerBrouillon` le dépose dans le dossier Drive
    **News Franchise** (il remplace celui du même mois), le **partage en lecture** puis met
-   son lien dans le bouton et dans la version texte, avant de créer le brouillon.
+   son adresse dans le lien et dans la version texte, avant de créer le brouillon.
 3. Partage (constante `PARTAGE_PDF` en haut du script) : `'DOMAINE'` (par défaut) = les
    personnes de votre organisation qui ont le lien ; `'LIEN'` = toute personne qui a le lien ;
    `'AUCUN'` = vous seul (à partager vous-même). Si votre organisation interdit ce partage,
    le script s'arrête et le dit : changez `PARTAGE_PDF` ou partagez le fichier à la main.
 
-Si aucun navigateur n'est trouvé, l'e-mail est préparé **sans** bouton, et la page d'export
+Si aucun navigateur n'est trouvé, l'e-mail est préparé **sans** ce lien, et la page d'export
 le signale. Le PDF est aussi enregistré à côté de l'export (`news-franchise-AAAA-MM.pdf`) et
 s'ouvre depuis la page d'export.
 
@@ -107,9 +107,9 @@ demandées, l'administrateur doit les autoriser : le script ne peut pas s'en pas
 | --- | --- |
 | `format` | `news-franchise-email/3` (le script refuse un autre format) |
 | `month`, `createdAt` | mois de la newsletter, date de préparation (UTC) |
-| `raw` | message complet au format MIME, encodé en base64 « URL » (ce que dépose le script) ; texte et HTML y sont en UTF-8 lisible (« 8bit »), pour que le script y remplace le lien du bouton |
+| `raw` | message complet au format MIME, encodé en base64 « URL » (ce que dépose le script) ; texte et HTML y sont en UTF-8 lisible (« 8bit »), pour que le script y pose le lien du PDF |
 | `printPdf` | `{fileName, mimeType, data}` : la version PDF à imprimer (`data` en base64), ou `null` |
-| `printLinkToken` | lien provisoire du bouton « Imprimer », remplacé par le lien du PDF dans Drive, ou `null` |
+| `printLinkToken` | adresse provisoire du lien « voir la version à imprimer », remplacé par le lien du PDF dans Drive, ou `null` |
 | `subject` | objet : « News Franchise — Octobre 2026 » |
 | `htmlBody` | HTML de l'e-mail ; les images y sont appelées par `cid:<nom>` |
 | `textBody` | version texte |

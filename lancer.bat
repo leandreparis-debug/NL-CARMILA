@@ -7,6 +7,15 @@ cd /d "%~dp0"
 set "VENV_PY=.venv\Scripts\python.exe"
 set "STAMP=.venv\.requirements.stamp"
 
+rem Un dossier .venv copié depuis un autre PC ne marche pas ici : on le recrée.
+if exist "%VENV_PY%" (
+    "%VENV_PY%" -c "import sys" >nul 2>&1
+    if errorlevel 1 (
+        echo Environnement Python venu d'un autre PC : il est recréé pour ce PC...
+        rmdir /s /q .venv
+    )
+)
+
 if not exist "%VENV_PY%" (
     echo Première utilisation : création de l'environnement Python...
     py -3.14 -m venv .venv 2>nul

@@ -36,6 +36,11 @@ Lancement manuel, équivalent :
 
 Si le port 5000 est déjà occupé, l'application l'indique (« L'application tourne peut-être déjà… ») et s'arrête : ouvrez simplement <http://127.0.0.1:5000>, ou changez de port via `NF_PORT`.
 
+**Sur un autre PC** : il y faut Python 3.14. Le dossier `.venv` est propre à chaque PC ;
+s'il a été copié avec le projet, `lancer.bat` le détecte et le recrée tout seul (connexion
+Internet nécessaire). Les données (base, photos) ne sont pas copiées avec le projet : chaque
+PC a les siennes, dans son propre `%LOCALAPPDATA%\NewsFranchise`.
+
 Vérification rapide : <http://127.0.0.1:5000/health> renvoie `{"status": "ok", "version": "0.1.0"}`.
 
 ## Emplacement des données

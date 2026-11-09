@@ -280,6 +280,7 @@ def test_mime_message_has_inline_images(
     for image in export.images:
         part = by_cid[image.cid]
         assert part.get_content_disposition() == "inline"
+        assert part["X-Attachment-Id"] == image.cid  # repère de Gmail pour l'image intégrée
         assert part.get_content_type() == image.mime_type
         assert part.get_content() == image.data
     assert {"nf-photo-1", "nf-photo-2", "nf-photo-3"} <= set(by_cid)  # photos des ouvertures

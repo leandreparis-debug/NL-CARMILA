@@ -453,7 +453,7 @@ def mime_message(export: EmailExport) -> bytes:
 
     multipart/alternative (version texte, puis HTML) ; le HTML est un multipart/related qui
     contient les images, chacune avec son Content-ID (appelé par « cid: » dans le HTML) et
-    marquée « inline ». C'est cette forme que Gmail affiche dans un brouillon : les images
+    marquée « inline » avec un X-Attachment-Id. C'est cette forme que Gmail affiche dans un brouillon : les images
     jointes par GmailApp.createDraft(… inlineImages …) n'y apparaissent pas toujours.
     Pas d'expéditeur ni de destinataire : Gmail met votre adresse, vous ajoutez les
     destinataires dans le brouillon.
@@ -476,6 +476,12 @@ def mime_message(export: EmailExport) -> bytes:
             filename=image.file_name,
             disposition="inline",
         )
+    # Gmail repère ses images intégrées par X-Attachment-Id : sans lui, ouvrir le brouillon
+    # dans Gmail (ajout des destinataires) puis l'envoyer peut les perdre.
+    for part in html_part.iter_parts():
+        cid = part["Content-ID"]
+        if cid:
+            part["X-Attachment-Id"] = cid.strip("<>")
     return message.as_bytes()
 
 
